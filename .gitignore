@@ -1,0 +1,23 @@
+# dependencies
+node_modules/
+
+# env
+.env
+.env.*
+
+# build
+dist/
+build/
+
+# logs
+*.log
+
+# uploads
+uploads/
+products-service/uploads/
+
+# docker volumes
+postgres_data/
+
+# misc
+.DS_Store

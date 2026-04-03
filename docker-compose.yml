@@ -1,0 +1,67 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: workshop_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d workshop_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+    ports:
+      - "8080:8080"
+    depends_on:
+      - products-service
+      - orders-service
+    restart: always
+
+  products-service:
+    build:
+      context: ./products-service
+    environment:
+      DATABASE_URL: postgresql://user:password@postgres:5432/workshop_db?schema=products
+      PORT: 3001
+    volumes:
+      - ./products-service/uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: always
+
+  orders-service:
+    build:
+      context: ./orders-service
+    environment:
+      DATABASE_URL: postgresql://user:password@postgres:5432/workshop_db?schema=orders
+      PORT: 3002
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: always
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "3000:3000"
+    environment:
+      VITE_API_URL: http://localhost:8080/api
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: npm run dev -- --host 0.0.0.0 --port 3000
+    depends_on:
+      - api-gateway
+
+volumes:
+  postgres_data:
