@@ -28,6 +28,8 @@ services:
   products-service:
     build:
       context: ./products-service
+    ports:
+      - "3001:3001"   # 👈 ДОБАВИЛ
     environment:
       DATABASE_URL: postgresql://user:password@postgres:5432/workshop_db?schema=products
       PORT: 3001
@@ -41,6 +43,8 @@ services:
   orders-service:
     build:
       context: ./orders-service
+    ports:
+      - "3002:3002"   # 👈 ВОТ ЭТО САМОЕ ВАЖНОЕ
     environment:
       DATABASE_URL: postgresql://user:password@postgres:5432/workshop_db?schema=orders
       PORT: 3002

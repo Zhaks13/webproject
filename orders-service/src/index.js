@@ -1,12 +1,15 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const cors = require('cors');
+const authRoutes = require('./routes/auth');
 
 const app = express();
 const prisma = new PrismaClient();
 
 app.use(cors());
 app.use(express.json());
+
+app.use('/auth', authRoutes);
 
 // Получение списка всех заказов
 app.get('/orders', async (req, res) => {

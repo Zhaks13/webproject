@@ -1,4 +1,4 @@
-import API_URL from '../api';
+import { API_URL } from '../api';
 
 export function getImageUrl(path) {
     if (!path) return '';

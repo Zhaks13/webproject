@@ -7,6 +7,16 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  phone     String   @unique   // 👈 ВАЖНО
+  password  String
+  role      String   @default("USER")
+  createdAt DateTime @default(now())
+  orders    Order[]
+}
+
 model Order {
   id           Int      @id @default(autoincrement())
   customerName String
@@ -15,4 +25,6 @@ model Order {
   productId    Int
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  userId       Int?
+  user         User?    @relation(fields: [userId], references: [id])
 }

@@ -5,21 +5,18 @@ const cors = require('cors');
 const app = express();
 
 /**
- * ✅ CORS (фикс)
+ * ✅ CORS
  */
 app.use(cors({
     origin: [
         'http://localhost:3000',
-        'http://localhost:5173', // Vite
-        // добавишь свой домен позже:
-        // 'https://your-domain.com'
+        'http://localhost:5173',
     ],
     credentials: true
 }));
 
 /**
- * 🔥 1. uploads (С rewrite!)
- * превращаем /api/products/uploads → /uploads
+ * 🔥 uploads
  */
 app.use('/api/products/uploads', createProxyMiddleware({
     target: 'http://products-service:3001',
@@ -30,8 +27,7 @@ app.use('/api/products/uploads', createProxyMiddleware({
 }));
 
 /**
- * 🔥 2. products API (С rewrite)
- * /api/products → /products
+ * 🔥 products API
  */
 app.use('/api/products', createProxyMiddleware({
     target: 'http://products-service:3001',
@@ -42,7 +38,7 @@ app.use('/api/products', createProxyMiddleware({
 }));
 
 /**
- * 🔥 orders
+ * 🔥 orders API
  */
 app.use('/api/orders', createProxyMiddleware({
     target: 'http://orders-service:3002',
@@ -53,7 +49,19 @@ app.use('/api/orders', createProxyMiddleware({
 }));
 
 /**
- * ✅ listen (фикс для Docker)
+ * 💥 ВОТ ЭТОГО У ТЕБЯ НЕ ХВАТАЛО
+ * 🔥 AUTH API
+ */
+app.use('/api/auth', createProxyMiddleware({
+    target: 'http://orders-service:3002',
+    changeOrigin: true,
+    pathRewrite: {
+        '^/api/auth': '/auth'
+    },
+}));
+
+/**
+ * ✅ listen
  */
 app.listen(8080, '0.0.0.0', () => {
     console.log('API Gateway running on 8080');
