@@ -4,7 +4,18 @@ const cors = require('cors');
 
 const app = express();
 
-app.use(cors());
+/**
+ * ✅ CORS (фикс)
+ */
+app.use(cors({
+    origin: [
+        'http://localhost:3000',
+        'http://localhost:5173', // Vite
+        // добавишь свой домен позже:
+        // 'https://your-domain.com'
+    ],
+    credentials: true
+}));
 
 /**
  * 🔥 1. uploads (С rewrite!)
@@ -41,6 +52,9 @@ app.use('/api/orders', createProxyMiddleware({
     },
 }));
 
-app.listen(8080, () => {
+/**
+ * ✅ listen (фикс для Docker)
+ */
+app.listen(8080, '0.0.0.0', () => {
     console.log('API Gateway running on 8080');
 });

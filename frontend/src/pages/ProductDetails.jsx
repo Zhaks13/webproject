@@ -42,56 +42,56 @@ export default function ProductDetails() {
         }
     };
 
-    if (loading) return <div className="min-h-screen flex justify-center items-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div></div>;
-    if (!product) return <div className="min-h-screen flex justify-center items-center"><h2 className="text-2xl text-gray-500 font-light">Товар не найден</h2></div>;
-
     return (
-        <div className="min-h-screen pt-12 pb-32 px-4 sm:px-6 relative overflow-hidden">
-            <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-12 lg:gap-20 relative z-10 pt-10">
+        <div className="min-h-screen bg-brand-warm pt-32 pb-32 px-6 sm:px-12 lg:px-20 font-sans relative overflow-hidden">
+            <div className="absolute top-[-5%] left-[-10%] w-[50vw] h-[50vw] bg-white rounded-full filter blur-[150px] opacity-60 pointer-events-none"></div>
+
+            <div className="max-w-[1400px] mx-auto flex flex-col lg:flex-row gap-16 lg:gap-32 relative z-10">
 
                 {/* Фото товара */}
-                <motion.div initial={{ opacity: 0, x: -40 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.8 }} className="flex-1 w-full relative">
-                    <div className="aspect-square bg-white rounded-[3rem] shadow-[0_20px_60px_rgba(0,0,0,0.04)] border border-gray-100 overflow-hidden p-4">
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1, ease: 'easeOut' }} className="flex-1 w-full relative">
+                    <div className="aspect-[4/5] overflow-hidden w-full h-full relative group">
+                        <div className="absolute inset-0 bg-brand-dark1 opacity-0 group-hover:opacity-5 transition-opacity duration-700 z-10 pointer-events-none"></div>
                         {product.image ? (
-                            <img src={getImageUrl(product.image)} alt={product.name} className="w-full h-full object-cover rounded-[2.5rem]" />
+                            <img src={getImageUrl(product.image)} alt={product.name} className="w-full h-full object-cover" />
                         ) : (
-                            <div className="w-full h-full bg-gray-50 rounded-[2.5rem] flex items-center justify-center text-gray-400 font-medium">Нет фото</div>
+                            <div className="w-full h-full bg-[#f0ede5] flex items-center justify-center text-[#1a1a1a]/30 font-light tracking-[0.2em] uppercase text-xs">Нет фото</div>
                         )}
                     </div>
                 </motion.div>
 
                 {/* Информация справа */}
-                <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.2 }} className="flex-1 w-full pt-8 lg:pt-16">
-                    <Link to="/catalog" className="text-xs font-bold tracking-[0.1em] text-gray-400 uppercase mb-8 inline-flex items-center hover:text-gray-900 transition-colors">
-                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-                        Назад в каталог
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1, delay: 0.3 }} className="flex-1 w-full flex flex-col justify-center">
+                    <Link to="/catalog" className="uppercase tracking-[0.15em] text-[10px] text-[#1a1a1a]/50 mb-12 hover:text-[#1a1a1a] transition-colors inline-block w-max">
+                        ← В каталог
                     </Link>
 
-                    <h1 className="text-5xl lg:text-6xl font-extrabold text-[#111] tracking-tight mb-4 leading-tight">{product.name}</h1>
-                    <p className="text-3xl font-bold text-gray-900 mb-10 bg-gray-100 w-max px-4 py-2 rounded-2xl">{product.price} ₸</p>
+                    <h1 className="text-4xl lg:text-6xl font-light text-[#1a1a1a] tracking-tight mb-8 leading-[1.1]">{product.name}</h1>
+                    <p className="text-2xl font-light text-brand-dark4 mb-12">{product.price} ₸</p>
 
-                    <div className="h-px w-full bg-gray-200 mb-10"></div>
+                    <div className="w-full flex-grow">
+                        <h3 className="text-sm uppercase tracking-[0.15em] text-[#1a1a1a] mb-6 font-medium">Об изделии</h3>
+                        <p className="text-lg text-[#1a1a1a]/70 font-light leading-relaxed mb-16">{product.description}</p>
 
-                    <h3 className="text-xl font-bold text-gray-900 mb-4">Описание</h3>
-                    <p className="text-lg text-gray-500 font-light leading-relaxed mb-12">{product.description}</p>
-
-                    <div className="bg-white p-8 rounded-[2rem] shadow-[0_8px_30px_rgba(0,0,0,0.03)] border border-gray-50 mb-10">
-                        <h4 className="font-bold text-gray-900 mb-4">Опции кастомизации</h4>
-                        <ul className="space-y-4 text-gray-500 font-light text-sm sm:text-base">
-                            <li className="flex items-start"><span className="w-6 h-6 rounded-full bg-green-50 text-green-600 flex items-center justify-center mr-3 mt-0.5 shrink-0"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg></span> Любые размеры (+/- 20% к стоимости)</li>
-                            <li className="flex items-start"><span className="w-6 h-6 rounded-full bg-green-50 text-green-600 flex items-center justify-center mr-3 mt-0.5 shrink-0"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg></span> Выбор породы дерева (Дуб, Ясень, Орех)</li>
-                            <li className="flex items-start"><span className="w-6 h-6 rounded-full bg-green-50 text-green-600 flex items-center justify-center mr-3 mt-0.5 shrink-0"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg></span> Более 15 оттенков итальянского масла</li>
-                        </ul>
+                        <div className="mb-16">
+                            <h4 className="text-sm uppercase tracking-[0.15em] text-[#1a1a1a] mb-6 font-medium">Детали</h4>
+                            <ul className="space-y-4 text-[#1a1a1a]/70 font-light text-base">
+                                <li className="flex items-center"><span className="w-1.5 h-1.5 bg-brand-dark4 rounded-full mr-4 shrink-0 opacity-60"></span> Индивидуальные размеры под заказ</li>
+                                <li className="flex items-center"><span className="w-1.5 h-1.5 bg-brand-dark4 rounded-full mr-4 shrink-0 opacity-60"></span> Отборные породы массива дерева</li>
+                                <li className="flex items-center"><span className="w-1.5 h-1.5 bg-brand-dark4 rounded-full mr-4 shrink-0 opacity-60"></span> Натуральное финишное покрытие маслами</li>
+                            </ul>
+                        </div>
                     </div>
 
-                    <motion.button
-                        whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.98 }}
-                        onClick={orderProduct}
-                        disabled={ordering}
-                        className={`w-full py-5 rounded-[1.5rem] font-bold text-lg text-white shadow-[0_10px_20px_rgba(0,0,0,0.1)] transition-all ${ordering ? 'bg-gray-400 cursor-not-allowed' : 'bg-gray-900 hover:bg-black hover:shadow-[0_15px_30px_rgba(0,0,0,0.15)]'}`}
-                    >
-                        {ordering ? 'АВТОРИЗАЦИЯ...' : 'В корзину'}
-                    </motion.button>
+                    <div className="mt-8">
+                        <button
+                            onClick={orderProduct}
+                            disabled={ordering}
+                            className={`w-full py-6 font-light text-lg uppercase tracking-[0.2em] transition-all duration-300 ${ordering ? 'opacity-50 cursor-not-allowed bg-brand-dark1 text-brand-light2' : 'bg-brand-dark1 text-brand-light2 hover:bg-brand-dark2'}`}
+                        >
+                            {ordering ? 'Обработка...' : 'Запросить расчет'}
+                        </button>
+                    </div>
                 </motion.div>
             </div>
         </div>

@@ -1,15 +1,18 @@
+import API_URL from '../api';
+
 export function getImageUrl(path) {
     if (!path) return '';
 
+    // если уже полный URL — ничего не делаем
     if (path.startsWith('http')) {
         return path;
     }
 
-    // если путь уже с /api — не трогаем
+    // если путь уже начинается с /api
     if (path.startsWith('/api')) {
-        return `http://localhost:8080${path}`;
+        return `${API_URL.replace('/api', '')}${path}`;
     }
 
-    // если без /api — добавляем
-    return `http://localhost:8080/api${path}`;
+    // если обычный путь
+    return `${API_URL}${path.startsWith('/') ? '' : '/'}${path}`;
 }
