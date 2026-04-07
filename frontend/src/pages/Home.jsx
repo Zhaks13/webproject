@@ -20,201 +20,109 @@ export default function Home() {
     }, []);
 
     return (
-        <div className="w-full font-sans text-[#051F20]">
+        <div className="w-full font-sans text-[#111] bg-[#f5f5f5]">
 
             {/* ======== HERO ======== */}
-            <div className="relative w-full h-screen min-h-[900px] max-h-[1100px] overflow-hidden" style={{ background: 'linear-gradient(170deg, #051F20 0%, #051F20 20%, #0B2B26 45%, #163832 72%, #235347 100%)' }}>
-
-                {/* Top cinematic dim overlay (navbar contrast + depth) */}
-                <div className="absolute inset-0 z-0 pointer-events-none" style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0) 30%)' }} />
-
-                {/* Radial vignette — darker corners, slightly lighter center */}
-                <div className="absolute inset-0 z-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse 80% 70% at 40% 50%, rgba(35,83,71,0.18) 0%, rgba(5,31,32,0.55) 100%)' }} />
-
-                {/* Right: workshop photo */}
-                <div className="absolute top-0 right-0 w-[56%] h-full z-[1]">
-                    <img
-                        src="https://images.unsplash.com/photo-1621293954908-907159247fc8?auto=format&fit=crop&q=80"
-                        alt="Workshop"
-                        className="w-full h-full object-cover opacity-75 mix-blend-luminosity"
-                    />
-                    {/* Left-fade to blend image edge into gradient background */}
-                    <div className="absolute inset-0" style={{ background: 'linear-gradient(to right, #0B2B26 0%, transparent 40%)' }} />
-                    <div className="absolute inset-0 bg-[#051F20]/20" />
+            <div className="relative w-full min-h-[90vh] flex flex-col items-center justify-center px-6 lg:px-12 xl:px-20 overflow-hidden">
+                <div className="absolute inset-0 pointer-events-none flex justify-center items-center opacity-40">
+                    <div className="w-[80vw] h-[80vw] bg-white rounded-full blur-[120px]"></div>
                 </div>
 
-                {/* SVG organic wave layers — multi-node bezier, asymmetric, no straight edges */}
-                <svg
-                    className="absolute inset-0 w-full h-full z-10 pointer-events-none"
-                    preserveAspectRatio="none"
-                    viewBox="0 0 1000 1000"
-                    xmlns="http://www.w3.org/2000/svg"
-                >
-                    <defs>
-                        {/* Right-cast shadow for wave separation depth */}
-                        <filter id="ws1" x="-5%" y="0%" width="115%" height="100%">
-                            <feDropShadow dx="8" dy="0" stdDeviation="14" floodColor="#000" floodOpacity="0.50" />
-                        </filter>
-                        <filter id="ws2" x="-5%" y="0%" width="115%" height="100%">
-                            <feDropShadow dx="6" dy="0" stdDeviation="10" floodColor="#000" floodOpacity="0.38" />
-                        </filter>
-                        <filter id="ws3" x="-5%" y="0%" width="115%" height="100%">
-                            <feDropShadow dx="5" dy="0" stdDeviation="8" floodColor="#000" floodOpacity="0.28" />
-                        </filter>
-                    </defs>
-
-                    {/*
-                      PATH DESIGN (all coordinates in 0–1000 viewBox):
-                      Each path anchors at top-left (0,0) and bottom-left (0,1000).
-                      The RIGHT edge is drawn top-to-bottom with 4 bezier control points
-                      giving: inward shoulder at top → outward belly mid → slight tuck → wider base.
-                      No two paths share the same curve shape — deliberate asymmetry.
-                    */}
-
-                    {/* LAYER 1 — cream/light (#f4f0e8)
-                        Covers 0→750 at top, S-curves to 770 belly, 755 base.
-                        Rightmost layer rendered first (sits behind dark layers). */}
-                    <path
-                        d="
-                          M 0,0
-                          L 755,0
-                          C 738,80  792,260  788,440
-                          C 784,620  762,800  758,1000
-                          L 0,1000 Z
-                        "
-                        fill="#f4f0e8"
-                        filter="url(#ws1)"
-                    />
-
-                    {/* LAYER 2 — mid-green #163832
-                        top 635, S-curve belly to 672 at y=480, base 645 */}
-                    <path
-                        d="
-                          M 0,0
-                          L 635,0
-                          C 612,80  665,270  668,460
-                          C 671,640  650,820  645,1000
-                          L 0,1000 Z
-                        "
-                        fill="#163832"
-                        filter="url(#ws2)"
-                    />
-
-                    {/* LAYER 3 — #0B2B26
-                        top 510, belly 542 at y=440, base 518 */}
-                    <path
-                        d="
-                          M 0,0
-                          L 510,0
-                          C 492,80  538,270  540,450
-                          C 542,630  524,820  518,1000
-                          L 0,1000 Z
-                        "
-                        fill="#0B2B26"
-                        filter="url(#ws3)"
-                    />
-
-                    {/* LAYER 4 — #051F20 (darkest, locks left text zone)
-                        top 390, subtle S: 374 at y=180, 412 at y=480, 398 base */}
-                    <path
-                        d="
-                          M 0,0
-                          L 390,0
-                          C 372,100  415,280  416,460
-                          C 417,640  400,820  396,1000
-                          L 0,1000 Z
-                        "
-                        fill="#051F20"
-                        filter="url(#ws3)"
-                    />
-
-                </svg>
-
-                {/* Content grid — z-20 above all waves */}
-                <div className="absolute inset-0 z-20 flex items-center pointer-events-none">
-
-                    {/* LEFT: title + button — max-width roughly matches dark layer */}
-                    <div className="pointer-events-auto w-[28%] min-w-[240px] ml-10 xl:ml-16 flex flex-col gap-8">
+                <div className="relative z-10 w-full max-w-[1400px] flex flex-col lg:flex-row items-center justify-between gap-16 mt-16">
+                    <div className="flex-1 flex flex-col gap-10">
                         <motion.h1
-                            initial={{ opacity: 0, x: -24 }} animate={{ opacity: 1, x: 0 }}
-                            transition={{ duration: 1.2, ease: 'easeOut' }}
-                            className="text-5xl md:text-6xl xl:text-7xl font-light text-[#DAF1DE] leading-[1.05] tracking-tight"
+                            initial={{ opacity: 0, y: 30 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 1, ease: "easeOut" }}
+                            className="text-6xl md:text-7xl lg:text-8xl font-bold tracking-tighter text-[#111] leading-[0.9]"
                         >
-                            Форма<br /><span className="text-white">и Суть.</span>
+                            Мебель<br />
+                            <span className="text-zinc-400">Со Смыслом.</span>
                         </motion.h1>
 
                         <motion.p
-                            initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                            transition={{ duration: 1.2, delay: 0.35 }}
-                            className="text-sm font-light text-[#8EB69B]/75 max-w-[240px] leading-relaxed"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ duration: 1, delay: 0.3 }}
+                            className="text-lg md:text-xl font-medium text-zinc-500 max-w-lg leading-relaxed tracking-tight"
                         >
-                            Мастерская ручная обработка каждого изделия.
+                            Исключительный дизайн, чистота форм и натуральные материалы. Создаем объекты, которые становятся частью вашей жизни.
                         </motion.p>
 
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1, delay: 0.6 }}>
+                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.5 }}>
                             <Link
                                 to="/catalog"
-                                className="inline-flex items-center gap-3 text-[#DAF1DE] text-[13px] tracking-wider font-light border border-[#163832] bg-[#0B2B26]/50 rounded-full px-7 py-3 transition-all duration-400 hover:bg-[#163832] hover:border-[#8EB69B]/40 hover:brightness-110"
+                                className="inline-flex items-center justify-center px-10 py-5 bg-[#111] text-white rounded-2xl text-sm font-semibold uppercase tracking-widest hover:scale-[1.02] hover:shadow-xl transition-all duration-300"
                             >
-                                Смотреть коллекции <span className="opacity-50">&rarr;</span>
+                                Смотреть коллекцию <span className="ml-3 opacity-50">&rarr;</span>
                             </Link>
                         </motion.div>
                     </div>
 
-                    {/* CENTER: inside cream band, ~63–75% of viewport → centre at 69% */}
-                    <div
-                        className="pointer-events-auto absolute flex flex-col items-center justify-center text-center text-[#0B2B26]"
-                        style={{ left: '69%', top: '50%', transform: 'translate(-50%,-50%)', width: '14%', minWidth: 170 }}
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 1.2, delay: 0.2 }}
+                        className="flex-1 w-full max-w-lg lg:max-w-none relative aspect-[4/5] lg:aspect-square rounded-[3rem] overflow-hidden shadow-2xl"
                     >
-                        <motion.div
-                            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 1.4, delay: 0.2 }}
-                            className="flex flex-col items-center gap-6"
-                        >
-                            <span className="uppercase tracking-[0.25em] text-[11px] text-[#163832] font-medium opacity-80">
-                                столярный
-                            </span>
-                            <h2
-                                className="font-serif font-light leading-none tracking-tight text-[#051F20]"
-                                style={{ fontSize: 'clamp(5rem, 9vw, 8rem)' }}
-                            >
-                                Цех
-                            </h2>
-                            <p className="text-[13px] font-light leading-relaxed text-[#163832]/85 max-w-[190px]">
-                                Индивидуальный подход, честный труд, безупречный результат.
-                            </p>
-                            <div
-                                className="mt-4 opacity-50 text-[#163832] border-t border-[#163832]/15 pt-5 w-full text-center"
-                                style={{ fontFamily: 'cursive', fontSize: '1.3rem' }}
-                            >
-                                Wooddoo
-                            </div>
-                        </motion.div>
-                    </div>
+                        <img
+                            src="https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&q=80"
+                            alt="Minimalist Wood Furniture"
+                            className="w-full h-full object-cover"
+                        />
+                    </motion.div>
                 </div>
             </div>
 
-            {/* ======== CATALOG ======== */}
-            <div className="py-24 bg-[#0B2B26] text-[#DAF1DE]">
-                <div className="max-w-[1600px] mx-auto px-6 lg:px-12">
-                    <motion.div initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} className="mb-16 text-center">
-                        <h2 className="text-4xl md:text-5xl font-light tracking-tight">Избранное</h2>
+            {/* ======== CATALOG PREVIEW ======== */}
+            <div className="py-32 bg-white">
+                <div className="w-full max-w-[1400px] mx-auto px-6 lg:px-12 xl:px-20">
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        className="mb-20 flex flex-col md:flex-row md:items-end justify-between gap-8"
+                    >
+                        <h2 className="text-5xl md:text-6xl font-bold tracking-tighter text-[#111]">
+                            Избранное
+                        </h2>
+                        <Link to="/catalog" className="text-zinc-500 hover:text-[#111] font-medium tracking-tight flex items-center transition-colors text-lg">
+                            Смотреть всё <span className="ml-2">&rarr;</span>
+                        </Link>
                     </motion.div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-10">
                         {featuredProducts.length === 0 ? (
-                            <p className="text-[#8EB69B] font-light text-lg col-span-full text-center">Загрузка каталога...</p>
-                        ) : featuredProducts.map(p => (
-                            <motion.div key={p.id} initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8 }} className="group">
-                                <Link to={`/product/${p.id}`} className="block bg-[#DAF1DE] rounded-xl p-4 overflow-hidden transform transition-transform duration-500 group-hover:scale-[1.03]">
-                                    <div className="relative aspect-[3/4] mb-5 overflow-hidden rounded-md bg-[#8EB69B]/30">
-                                        {p.image
-                                            ? <img src={getImageUrl(p.image)} className="w-full h-full object-cover" alt={p.name} />
-                                            : <div className="w-full h-full flex items-center justify-center text-[#163832]/50 font-light text-xs uppercase tracking-widest">Нет фото</div>
-                                        }
+                            <p className="text-zinc-400 font-medium col-span-full">Загрузка каталога...</p>
+                        ) : featuredProducts.map((p, i) => (
+                            <motion.div
+                                key={p.id}
+                                initial={{ opacity: 0, y: 30 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                viewport={{ once: true }}
+                                transition={{ duration: 0.6, delay: i * 0.1 }}
+                                className="group cursor-pointer"
+                            >
+                                <Link to={`/product/${p.id}`} className="block w-full">
+                                    <div className="w-full aspect-[4/5] bg-zinc-100 rounded-3xl overflow-hidden mb-6 relative shadow-sm group-hover:shadow-xl transition-all duration-500 group-hover:-translate-y-2">
+                                        <div className="absolute inset-0 bg-[#111]/0 group-hover:bg-[#111]/5 transition-colors duration-300 z-10 pointer-events-none"></div>
+                                        {p.image ? (
+                                            <img
+                                                src={getImageUrl(p.image)}
+                                                alt={p.name}
+                                                className="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-[1.05]"
+                                            />
+                                        ) : (
+                                            <div className="w-full h-full flex flex-col items-center justify-center text-zinc-400 text-xs tracking-widest uppercase">Нет фото</div>
+                                        )}
                                     </div>
-                                    <div className="text-center">
-                                        <h3 className="text-lg font-medium text-[#051F20] mb-1">{p.name}</h3>
-                                        <span className="text-sm font-light text-[#163832]">{p.price} ₸</span>
+                                    <div className="flex flex-col gap-1 px-2">
+                                        <h3 className="text-xl font-bold tracking-tight text-[#111] group-hover:text-zinc-600 transition-colors">
+                                            {p.name}
+                                        </h3>
+                                        <p className="text-sm font-medium text-zinc-500">
+                                            {p.price} ₸
+                                        </p>
                                     </div>
                                 </Link>
                             </motion.div>
@@ -224,16 +132,29 @@ export default function Home() {
             </div>
 
             {/* ======== CTA ======== */}
-            <div className="py-32 px-6 bg-[#051F20] flex justify-center">
-                <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 1 }} className="text-center max-w-xl">
-                    <h2 className="text-4xl md:text-5xl font-light text-[#DAF1DE] mb-10 tracking-tight">
-                        Создадим ваш проект вместе
+            <div className="w-full py-40 bg-[#f5f5f5] flex items-center justify-center px-6">
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    whileInView={{ opacity: 1, scale: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.8 }}
+                    className="w-full max-w-5xl bg-white rounded-[3rem] p-16 md:p-24 text-center shadow-xl flex flex-col items-center border border-zinc-100"
+                >
+                    <h2 className="text-5xl md:text-7xl font-bold text-[#111] tracking-tighter mb-8 leading-[0.9]">
+                        Готовы создать<br />проект?
                     </h2>
-                    <Link to="/custom-order" className="inline-block bg-[#8EB69B] text-[#051F20] border border-[#8EB69B] px-10 py-3.5 rounded-full uppercase tracking-[0.1em] text-sm font-medium hover:bg-[#051F20] hover:text-[#8EB69B] transition-colors duration-300">
+                    <p className="text-xl text-zinc-500 mb-12 max-w-xl font-medium tracking-tight">
+                        Мы воплотим ваши идеи в реальность с безупречным вниманием к деталям.
+                    </p>
+                    <Link
+                        to="/custom-order"
+                        className="inline-block bg-[#111] text-white px-12 py-5 rounded-full text-sm font-bold uppercase tracking-widest hover:bg-zinc-800 hover:scale-[1.02] hover:shadow-lg transition-all duration-300"
+                    >
                         Обсудить проект
                     </Link>
                 </motion.div>
             </div>
-        </div >
+
+        </div>
     );
 }

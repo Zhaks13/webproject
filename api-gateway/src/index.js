@@ -5,7 +5,7 @@ const cors = require('cors');
 const app = express();
 
 /**
- * ✅ CORS
+ * CORS
  */
 app.use(cors({
     origin: [
@@ -16,52 +16,58 @@ app.use(cors({
 }));
 
 /**
- * 🔥 uploads
+ * PRODUCTS uploads
  */
 app.use('/api/products/uploads', createProxyMiddleware({
     target: 'http://products-service:3001',
     changeOrigin: true,
     pathRewrite: {
         '^/api/products': ''
-    },
+    }
 }));
 
 /**
- * 🔥 products API
+ * PRODUCTS API
  */
 app.use('/api/products', createProxyMiddleware({
     target: 'http://products-service:3001',
     changeOrigin: true,
     pathRewrite: {
         '^/api/products': '/products'
-    },
+    }
 }));
 
 /**
- * 🔥 orders API
+ * ORDERS API (FIXED)
  */
 app.use('/api/orders', createProxyMiddleware({
     target: 'http://orders-service:3002',
     changeOrigin: true,
     pathRewrite: {
-        '^/api/orders': '/orders'
-    },
+        '^/api': ''
+    }
 }));
 
 /**
- * 💥 ВОТ ЭТОГО У ТЕБЯ НЕ ХВАТАЛО
- * 🔥 AUTH API
+ * AUTH API
  */
 app.use('/api/auth', createProxyMiddleware({
     target: 'http://orders-service:3002',
     changeOrigin: true,
     pathRewrite: {
-        '^/api/auth': '/auth'
-    },
+        '^/api': ''
+    }
 }));
 
 /**
- * ✅ listen
+ * health check
+ */
+app.get('/', (req, res) => {
+    res.send('API Gateway is running');
+});
+
+/**
+ * listen
  */
 app.listen(8080, '0.0.0.0', () => {
     console.log('API Gateway running on 8080');
