@@ -1,0 +1,80 @@
+import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
+
+const fadeUp = (delay = 0) => ({
+    initial: { opacity: 0, y: 40 },
+    whileInView: { opacity: 1, y: 0 },
+    viewport: { once: true, margin: '-100px' },
+    transition: { duration: 0.6, ease: 'easeOut', delay }
+});
+
+export default function ProductInfo({ product, openModal, mobile }) {
+    const isLg = !mobile;
+
+    return (
+        <div className={`w-full flex flex-col justify-start ${isLg ? 'pt-32 px-16 lg:min-h-[250vh]' : 'px-6'}`}>
+            {/* Навигация */}
+            <Link
+                to="/catalog"
+                className="text-xs uppercase tracking-widest text-zinc-400 font-bold hover:text-[#111] transition-colors mb-12 inline-block"
+            >
+                ← Вернуться в каталог
+            </Link>
+
+            {/* Заголовок */}
+            <motion.h1
+                {...fadeUp(0)}
+                className="text-5xl lg:text-7xl font-semibold tracking-tight leading-[1.05] mb-6"
+            >
+                {product.name}
+            </motion.h1>
+
+            {/* Цена */}
+            <motion.p
+                {...fadeUp(0.1)}
+                className="text-2xl font-medium text-zinc-500 mb-16"
+            >
+                {product.price} ₸
+            </motion.p>
+
+            {/* Описание */}
+            <motion.div {...fadeUp(0.2)} className="mb-16">
+                <h3 className="text-xs uppercase tracking-widest font-bold text-[#111] mb-4">Философия изделия</h3>
+                <p className="text-base text-zinc-500 leading-relaxed">
+                    {product.description}
+                </p>
+                <p className="text-base text-zinc-500 leading-relaxed mt-6">
+                    Мы отбираем каждую доску вручную, чтобы сохранить её природный рисунок. Массив дышит, живёт и со временем обретает ещё более глубокий характер. Каждый спил уникален — в этом истинная роскошь.
+                </p>
+            </motion.div>
+
+            {/* Характеристики */}
+            <motion.div {...fadeUp(0.3)} className="mb-16">
+                {[
+                    ['Размеры и конфигурация', 'Индивидуальные размеры под ваши задачи. Доступны разные варианты финишного покрытия.'],
+                    ['Материалы', 'Массив дуба / ясеня / ореха. Масло-воск европейского производства.'],
+                    ['Срок изготовления', 'От 14 до 30 рабочих дней в зависимости от сложности.'],
+                ].map(([title, desc]) => (
+                    <div key={title} className="border-t border-zinc-200 py-5">
+                        <h4 className="text-xs uppercase tracking-widest font-bold text-[#111] mb-1">{title}</h4>
+                        <p className="text-sm text-zinc-500 font-medium">{desc}</p>
+                    </div>
+                ))}
+                <div className="border-t border-zinc-200" />
+            </motion.div>
+
+            {/* Кнопка */}
+            <div className={`${isLg ? 'sticky bottom-12' : 'mb-16'}`}>
+                <motion.button
+                    {...fadeUp(0.4)}
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={openModal}
+                    className="w-full max-w-md bg-[#111] text-white py-5 rounded-2xl text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-opacity shadow-xl shadow-black/10"
+                >
+                    Заказать проект
+                </motion.button>
+            </div>
+        </div>
+    );
+}
