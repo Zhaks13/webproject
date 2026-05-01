@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { LanguageProvider } from './context/LanguageContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Home from './pages/Home';
@@ -17,7 +18,7 @@ function AppRoutes() {
     return (
         <div className="min-h-screen bg-[#f5f5f5] text-[#111] font-sans flex flex-col selection:bg-zinc-200">
             <Navbar />
-            <main className="flex-grow pt-24 pb-16 overflow-hidden">
+            <main className="flex-grow pt-24 overflow-hidden">
                 <Routes>
                     <Route path="/" element={<Home />} />
                     <Route path="/catalog" element={<Products />} />
@@ -54,9 +55,11 @@ function AppRoutes() {
 
 function App() {
     return (
-        <BrowserRouter>
-            <AppRoutes />
-        </BrowserRouter>
+        <LanguageProvider>
+            <BrowserRouter>
+                <AppRoutes />
+            </BrowserRouter>
+        </LanguageProvider>
     );
 }
 

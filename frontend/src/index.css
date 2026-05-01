@@ -2,11 +2,66 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─── Hide scrollbar globally ─── */
+html,
+body {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none;
+}
+
 body {
   background-color: #F5F5F7;
   color: #111827;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── Non-selectable UI elements ─── */
+nav,
+nav a,
+nav button,
+header,
+footer,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+button,
+label,
+p,
+span,
+li,
+.card,
+[class*="tracking-"],
+[class*="uppercase"] {
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Clickable elements keep pointer cursor */
+a,
+button,
+[role="button"] {
+  cursor: pointer;
+}
+
+/* ─── Always selectable: form controls ─── */
+input,
+textarea,
+select,
+[contenteditable] {
+  -webkit-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+  cursor: auto;
 }
 
 @layer utilities {

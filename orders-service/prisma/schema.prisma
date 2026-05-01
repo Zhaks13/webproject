@@ -26,9 +26,13 @@ model Order {
   quantity        Int      @default(1)
   paymentMethod   String   @default("CASH")
   comment         String?
+  adminComment    String?
+  source          String   @default("WEB")
+  totalPrice      Float?
   selectedOptions Json?
   status          String   @default("NEW") // "NEW", "IN_PROGRESS", "READY"
-  productId       Int
+  productId       Int?
+  images          String[]
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   userId       Int?

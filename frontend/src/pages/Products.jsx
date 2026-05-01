@@ -3,8 +3,12 @@ import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { getImageUrl } from '../utils/image';
+import { useLang } from '../context/LanguageContext';
 
 export default function Products() {
+    const { t } = useLang();
+    const c = t.catalog;
+
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
@@ -57,10 +61,10 @@ export default function Products() {
                     className="mb-16"
                 >
                     <h1 className="text-6xl md:text-7xl font-semibold tracking-tight mb-6">
-                        Каталог
+                        {c.title}
                     </h1>
                     <p className="max-w-xl text-lg text-zinc-500">
-                        Естественная фактура массива, чистые линии и ручной труд в каждой детали. Выберите предмет, который станет центром вашего пространства.
+                        {c.desc}
                     </p>
                 </motion.div>
 
@@ -73,7 +77,7 @@ export default function Products() {
                         initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                         className="py-20 text-zinc-500 text-lg"
                     >
-                        Каталог пуст или обновляется.
+                        {c.empty}
                     </motion.div>
                 ) : (
                     <motion.div
@@ -97,7 +101,7 @@ export default function Products() {
                                         />
                                     ) : (
                                         <div className="h-[260px] w-full bg-zinc-100 flex items-center justify-center text-zinc-400 text-xs font-bold uppercase tracking-widest transition-transform duration-500 group-hover:scale-105">
-                                            Нет фото
+                                            {c.noPhoto}
                                         </div>
                                     )}
                                 </div>
@@ -120,7 +124,7 @@ export default function Products() {
                                         onClick={() => handleOrder(p.id)}
                                         className="w-full bg-black text-white rounded-xl py-2 hover:opacity-90 font-medium transition-opacity mt-auto"
                                     >
-                                        Подробнее
+                                        {c.details}
                                     </button>
                                 </div>
                             </motion.div>

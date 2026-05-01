@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { api } from '../api';
 import { getImageUrl } from '../utils/image';
 import OrderModal from '../components/OrderModal';
-import StickyGallery from '../components/product/StickyGallery';
+import ImageGallery from '../components/product/StickyGallery';
 import ProductInfo from '../components/product/ProductInfo';
 
 export default function ProductDetails() {
@@ -13,7 +13,6 @@ export default function ProductDetails() {
     const [allProducts, setAllProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const containerRef = useRef(null);
 
     useEffect(() => {
         loadData();
@@ -56,6 +55,7 @@ export default function ProductDetails() {
     );
 
     const related = allProducts.filter(p => p.id !== product.id).slice(0, 3);
+    const mobileThumb = product.images?.[0] || product.image || null;
 
     return (
         <div className="bg-[#f5f5f5] text-[#111] min-h-screen font-sans">
@@ -66,7 +66,6 @@ export default function ProductDetails() {
                 selectedOptions={{}}
             />
 
-            {/* ---- HERO: sticky layout (200vh) ---- */}
             {/* Мобильная навигация */}
             <div className="px-6 pt-8 pb-4 lg:hidden">
                 <Link to="/catalog" className="text-xs uppercase tracking-widest font-bold text-zinc-400 hover:text-[#111] transition-colors">
@@ -74,24 +73,24 @@ export default function ProductDetails() {
                 </Link>
             </div>
 
-            {/* Desktop: sticky 200vh контейнер */}
-            <div ref={containerRef} className="hidden lg:flex h-[200vh] relative">
-                {/* ЛЕВАЯ: sticky изображение */}
-                <div className="w-1/2 sticky top-0 h-screen p-12 flex items-center">
-                    <StickyGallery containerRef={containerRef} image={product.image} />
+            {/* Desktop: две колонки */}
+            <div className="hidden lg:flex">
+                {/* ЛЕВАЯ: галерея */}
+                <div className="w-1/2 p-12 flex items-start pt-24">
+                    <ImageGallery images={product.images} image={product.image} />
                 </div>
 
-                {/* ПРАВАЯ: ProductInfo компонент */}
+                {/* ПРАВАЯ: ProductInfo */}
                 <div className="w-1/2 overflow-y-auto">
                     <ProductInfo product={product} openModal={openModal} />
                 </div>
             </div>
 
-            {/* Мобильная версия (обычный поток) */}
+            {/* Мобильная версия */}
             <div className="lg:hidden px-6 pb-16">
                 <div className="w-full aspect-[4/5] rounded-2xl overflow-hidden bg-zinc-100 shadow-sm mb-10">
-                    {product.image ? (
-                        <img src={getImageUrl(product.image)} alt={product.name} className="w-full h-full object-cover" />
+                    {mobileThumb ? (
+                        <img src={getImageUrl(mobileThumb)} alt={product.name} className="w-full h-full object-cover" />
                     ) : (
                         <div className="w-full h-full flex items-center justify-center text-zinc-400 text-xs font-bold uppercase tracking-widest">Нет фото</div>
                     )}
@@ -107,8 +106,8 @@ export default function ProductDetails() {
 
                 <div className="mb-10">
                     {[
-                        ['Материалы', 'Массив дуба / ясеня / ореха. Масло-воск европейского производства.'],
-                        ['Конфигурация', 'Индивидуальные размеры под ваши задачи.'],
+                        ['Материалы', 'Массив дуба / ясеня / ореха.'],
+                        ['Конфигурация', 'Индивидуальные размеры.'],
                         ['Срок изготовления', 'От 14 до 30 рабочих дней.'],
                     ].map(([title, desc]) => (
                         <div key={title} className="border-t border-zinc-200 py-5">
@@ -127,9 +126,9 @@ export default function ProductDetails() {
                 </button>
             </div>
 
-            {/* ---- RELATED PRODUCTS ---- */}
+            {/* Related Products */}
             {related.length > 0 && (
-                <div className="max-w-6xl mx-auto px-6 py-20 border-t border-zinc-200">
+                <div className="max-w-6xl mx-auto px-6 py-12 border-t border-zinc-200">
                     <h2 className="text-3xl font-semibold tracking-tight mb-12">Дополните интерьер</h2>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                         {related.map((p, idx) => (
@@ -143,9 +142,9 @@ export default function ProductDetails() {
                             >
                                 <Link to={`/product/${p.id}`}>
                                     <div className="aspect-[4/5] rounded-2xl overflow-hidden bg-zinc-100 mb-4 shadow-sm">
-                                        {p.image ? (
+                                        {(p.images?.[0] || p.image) ? (
                                             <img
-                                                src={getImageUrl(p.image)}
+                                                src={getImageUrl(p.images?.[0] || p.image)}
                                                 alt={p.name}
                                                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                                             />
@@ -162,7 +161,7 @@ export default function ProductDetails() {
                 </div>
             )}
 
-            {/* ---- CTA FOOTER ---- */}
+            {/* CTA Footer */}
             <div className="bg-[#111] text-white py-32 px-6 text-center rounded-t-3xl mt-16">
                 <h2 className="text-5xl md:text-7xl font-semibold tracking-tighter mb-8">
                     Ощутите<br />фактуру.

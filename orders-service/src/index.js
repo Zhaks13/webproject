@@ -3,12 +3,45 @@ const { PrismaClient } = require('@prisma/client');
 const cors = require('cors');
 const authRoutes = require('./routes/auth');
 const { verifyToken, requireAdmin } = require('./middleware/auth');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const prisma = new PrismaClient();
 
+function normalizeOrderStatus(status) {
+    return typeof status === 'string' ? status.trim().toUpperCase() : status;
+}
+
+function parseOptionalFloat(value) {
+    if (value === undefined || value === null || value === '') {
+        return null;
+    }
+
+    const parsed = Number.parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : null;
+}
+
+if (!fs.existsSync('uploads')) {
+    fs.mkdirSync('uploads');
+}
+
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, 'uploads/'),
+    filename: (req, file, cb) => {
+        cb(null, Date.now() + '-' + Math.round(Math.random() * 1E9) + path.extname(file.originalname));
+    }
+});
+
+const upload = multer({
+    storage,
+    limits: { files: 5 }
+});
+
 app.use(cors());
 app.use(express.json());
+app.use('/uploads', express.static('uploads'));
 
 app.use('/auth', authRoutes);
 
@@ -39,11 +72,21 @@ app.get('/orders', verifyToken, requireAdmin, async (req, res) => {
     }
 });
 
-// 🔥 Создание нового заказа (FIXED)
-app.post('/orders', verifyToken, async (req, res) => {
+// 🔥 Создание нового заказа (Поддержка как авторизованных, так и гостей + кастомные)
+app.post('/orders', upload.array('images', 5), async (req, res) => {
     try {
-        console.log('BODY:', req.body);
-        console.log('USER:', req.user);
+        let userId = null;
+        const authHeader = req.headers.authorization;
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            try {
+                const token = authHeader.split(' ')[1];
+                const jwt = require('jsonwebtoken');
+                const decoded = jwt.verify(token, process.env.JWT_SECRET || 'super-secret-key');
+                userId = decoded.userId;
+            } catch (e) {
+                console.error("Token verification failed for order creation", e);
+            }
+        }
 
         const {
             productId,
@@ -54,30 +97,41 @@ app.post('/orders', verifyToken, async (req, res) => {
             quantity,
             paymentMethod,
             comment,
-            selectedOptions
+            selectedOptions,
+            adminComment,
+            source,
+            totalPrice
         } = req.body;
 
-        const userId = req.user.userId;
-
-        if (!productId || !name || !phone) {
-            return res.status(400).json({ error: 'Не хватает обязательных полей' });
+        if (!name || !phone) {
+            return res.status(400).json({ error: 'Не хватает обязательных полей (имя, телефон)' });
         }
 
-        const order = await prisma.order.create({
-            data: {
-                name,
-                phone,
-                address,
-                whatsapp,
-                quantity: quantity ? parseInt(quantity) : 1,
-                paymentMethod,
-                comment,
-                selectedOptions: selectedOptions || {},
-                productId: parseInt(productId),
-                status: 'NEW',
-                userId: parseInt(userId)
-            }
-        });
+        const data = {
+            name,
+            phone,
+            address: address || null,
+            whatsapp: !!whatsapp,
+            quantity: quantity ? parseInt(quantity) : 1,
+            paymentMethod: paymentMethod || 'CASH',
+            comment: comment || null,
+            adminComment: adminComment || null,
+            source: source || 'WEB',
+            totalPrice: parseOptionalFloat(totalPrice),
+            selectedOptions: typeof selectedOptions === 'string' ? JSON.parse(selectedOptions) : (selectedOptions || {}),
+            status: 'NEW',
+            images: req.files ? req.files.map(f => `/uploads/${f.filename}`) : []
+        };
+
+        if (productId) {
+            data.productId = parseInt(productId);
+        }
+
+        if (userId) {
+            data.userId = parseInt(userId);
+        }
+
+        const order = await prisma.order.create({ data });
 
         res.status(201).json(order);
 
@@ -91,7 +145,11 @@ app.post('/orders', verifyToken, async (req, res) => {
 app.put('/orders/:id/status', verifyToken, requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
-        const { status } = req.body;
+        const status = normalizeOrderStatus(req.body.status);
+
+        if (!status) {
+            return res.status(400).json({ error: 'Status is required' });
+        }
 
         const updatedOrder = await prisma.order.update({
             where: { id: parseInt(id) },
@@ -102,6 +160,41 @@ app.put('/orders/:id/status', verifyToken, requireAdmin, async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(404).json({ error: 'Заказ не найден или ошибка обновления' });
+    }
+});
+
+app.patch('/orders/:id', verifyToken, requireAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const data = {};
+
+        if (Object.prototype.hasOwnProperty.call(req.body, 'status')) {
+            const status = normalizeOrderStatus(req.body.status);
+
+            if (!status) {
+                return res.status(400).json({ error: 'Status must be a non-empty string' });
+            }
+
+            data.status = status;
+        }
+
+        if (Object.prototype.hasOwnProperty.call(req.body, 'adminComment')) {
+            data.adminComment = req.body.adminComment ? String(req.body.adminComment) : null;
+        }
+
+        if (Object.keys(data).length === 0) {
+            return res.status(400).json({ error: 'Nothing to update' });
+        }
+
+        const updatedOrder = await prisma.order.update({
+            where: { id: parseInt(id) },
+            data
+        });
+
+        res.json(updatedOrder);
+    } catch (error) {
+        console.error(error);
+        res.status(404).json({ error: 'Order not found or update failed' });
     }
 });
 

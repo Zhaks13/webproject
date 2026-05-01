@@ -1,10 +1,15 @@
 import { motion } from 'framer-motion';
+import heroKitchen from '../images/hero-kitchen.jpg';
 import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { api } from '../api';
 import { getImageUrl } from '../utils/image';
+import { useLang } from '../context/LanguageContext';
 
 export default function Home() {
+    const { t } = useLang();
+    const h = t.home;
+
     const [featuredProducts, setFeaturedProducts] = useState([]);
 
     useEffect(() => {
@@ -36,8 +41,8 @@ export default function Home() {
                             transition={{ duration: 1, ease: "easeOut" }}
                             className="text-6xl md:text-7xl lg:text-8xl font-bold tracking-tighter text-[#111] leading-[0.9]"
                         >
-                            Мебель<br />
-                            <span className="text-zinc-400">Со Смыслом.</span>
+                            {h.heroTitle}<br />
+                            <span className="text-zinc-400">{h.heroSubtitle}</span>
                         </motion.h1>
 
                         <motion.p
@@ -46,7 +51,7 @@ export default function Home() {
                             transition={{ duration: 1, delay: 0.3 }}
                             className="text-lg md:text-xl font-medium text-zinc-500 max-w-lg leading-relaxed tracking-tight"
                         >
-                            Исключительный дизайн, чистота форм и натуральные материалы. Создаем объекты, которые становятся частью вашей жизни.
+                            {h.heroDesc}
                         </motion.p>
 
                         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.5 }}>
@@ -54,7 +59,7 @@ export default function Home() {
                                 to="/catalog"
                                 className="inline-flex items-center justify-center px-10 py-5 bg-[#111] text-white rounded-2xl text-sm font-semibold uppercase tracking-widest hover:scale-[1.02] hover:shadow-xl transition-all duration-300"
                             >
-                                Смотреть коллекцию <span className="ml-3 opacity-50">&rarr;</span>
+                                {h.heroCta} <span className="ml-3 opacity-50">&rarr;</span>
                             </Link>
                         </motion.div>
                     </div>
@@ -66,9 +71,9 @@ export default function Home() {
                         className="flex-1 w-full max-w-lg lg:max-w-none relative aspect-[4/5] lg:aspect-square rounded-[3rem] overflow-hidden shadow-2xl"
                     >
                         <img
-                            src="https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?auto=format&fit=crop&q=80"
-                            alt="Minimalist Wood Furniture"
-                            className="w-full h-full object-cover"
+                            src={heroKitchen}
+                            alt="Кухня Stolyarniy Dvor"
+                            className="w-full h-full object-cover object-[center_20%]"
                         />
                     </motion.div>
                 </div>
@@ -84,16 +89,16 @@ export default function Home() {
                         className="mb-20 flex flex-col md:flex-row md:items-end justify-between gap-8"
                     >
                         <h2 className="text-5xl md:text-6xl font-bold tracking-tighter text-[#111]">
-                            Избранное
+                            {h.featuredTitle}
                         </h2>
                         <Link to="/catalog" className="text-zinc-500 hover:text-[#111] font-medium tracking-tight flex items-center transition-colors text-lg">
-                            Смотреть всё <span className="ml-2">&rarr;</span>
+                            {h.featuredAll} <span className="ml-2">&rarr;</span>
                         </Link>
                     </motion.div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-10">
                         {featuredProducts.length === 0 ? (
-                            <p className="text-zinc-400 font-medium col-span-full">Загрузка каталога...</p>
+                            <p className="text-zinc-400 font-medium col-span-full">{h.loading}</p>
                         ) : featuredProducts.map((p, i) => (
                             <motion.div
                                 key={p.id}
@@ -113,7 +118,7 @@ export default function Home() {
                                                 className="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-[1.05]"
                                             />
                                         ) : (
-                                            <div className="w-full h-full flex flex-col items-center justify-center text-zinc-400 text-xs tracking-widest uppercase">Нет фото</div>
+                                            <div className="w-full h-full flex flex-col items-center justify-center text-zinc-400 text-xs tracking-widest uppercase">{h.noPhoto}</div>
                                         )}
                                     </div>
                                     <div className="flex flex-col gap-1 px-2">
@@ -141,16 +146,16 @@ export default function Home() {
                     className="w-full max-w-5xl bg-white rounded-[3rem] p-16 md:p-24 text-center shadow-xl flex flex-col items-center border border-zinc-100"
                 >
                     <h2 className="text-5xl md:text-7xl font-bold text-[#111] tracking-tighter mb-8 leading-[0.9]">
-                        Готовы создать<br />проект?
+                        {h.ctaTitle}
                     </h2>
                     <p className="text-xl text-zinc-500 mb-12 max-w-xl font-medium tracking-tight">
-                        Мы воплотим ваши идеи в реальность с безупречным вниманием к деталям.
+                        {h.ctaDesc}
                     </p>
                     <Link
                         to="/custom-order"
                         className="inline-block bg-[#111] text-white px-12 py-5 rounded-full text-sm font-bold uppercase tracking-widest hover:bg-zinc-800 hover:scale-[1.02] hover:shadow-lg transition-all duration-300"
                     >
-                        Обсудить проект
+                        {h.ctaButton}
                     </Link>
                 </motion.div>
             </div>
