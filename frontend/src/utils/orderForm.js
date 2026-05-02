@@ -4,7 +4,6 @@ export function buildInitialOrderFormState(user, selectedOptions = {}) {
         phone: normalizePhoneInput(user?.phone || ''),
         address: '',
         whatsapp: false,
-        quantity: '1',
         paymentMethod: 'CASH',
         comment: '',
         selectedOptions
@@ -100,7 +99,6 @@ export function validateOrderForm(values) {
     const errors = {};
     const normalizedName = values.name.trim();
     const normalizedAddress = values.address.trim();
-    const quantity = parseQuantity(values.quantity);
 
     if (normalizedName.length < 2) {
         errors.name = 'Введите минимум 2 символа.';
@@ -116,12 +114,6 @@ export function validateOrderForm(values) {
         errors.address = 'Укажите адрес не короче 5 символов.';
     }
 
-    if (quantity === null) {
-        errors.quantity = 'Укажите количество.';
-    } else if (quantity < 1 || quantity > 100) {
-        errors.quantity = 'Количество должно быть от 1 до 100.';
-    }
-
     if (!values.paymentMethod) {
         errors.paymentMethod = 'Выберите способ оплаты.';
     }
@@ -134,7 +126,6 @@ export function hasRequiredOrderFields(values) {
         values.name.trim() &&
         values.phone &&
         values.address.trim() &&
-        values.quantity &&
         values.paymentMethod
     );
 }

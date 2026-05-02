@@ -38,7 +38,7 @@ app.use('/api/products', createProxyMiddleware({
 }));
 
 /**
- * ORDERS API (FIXED)
+ * ORDERS API
  */
 app.use('/api/orders', createProxyMiddleware({
     target: 'http://orders-service:3002',
@@ -52,6 +52,17 @@ app.use('/api/orders', createProxyMiddleware({
  * AUTH API
  */
 app.use('/api/auth', createProxyMiddleware({
+    target: 'http://orders-service:3002',
+    changeOrigin: true,
+    pathRewrite: {
+        '^/api': ''
+    }
+}));
+
+/**
+ * 🔥 USERS API (ДОБАВЛЕНО)
+ */
+app.use('/api/users', createProxyMiddleware({
     target: 'http://orders-service:3002',
     changeOrigin: true,
     pathRewrite: {

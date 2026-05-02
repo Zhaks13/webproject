@@ -9,7 +9,7 @@ const fadeUp = (delay = 0) => ({
     transition: { duration: 0.6, ease: 'easeOut', delay }
 });
 
-export default function ProductInfo({ product, openModal, mobile }) {
+export default function ProductInfo({ product, onAddToCart, added, mobile }) {
     const { t } = useLang();
     const p = t.product;
     const isLg = !mobile;
@@ -68,10 +68,13 @@ export default function ProductInfo({ product, openModal, mobile }) {
                     {...fadeUp(0.4)}
                     whileHover={{ scale: 1.03 }}
                     whileTap={{ scale: 0.97 }}
-                    onClick={openModal}
-                    className="w-full max-w-md bg-[#111] text-white py-5 rounded-2xl text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-opacity shadow-xl shadow-black/10"
+                    onClick={onAddToCart}
+                    className={`w-full max-w-md py-5 rounded-2xl text-xs font-bold uppercase tracking-widest transition-all duration-300 shadow-xl shadow-black/10 ${added
+                            ? 'bg-emerald-600 text-white'
+                            : 'bg-[#111] text-white hover:opacity-90'
+                        }`}
                 >
-                    {p.orderButton}
+                    {added ? (p.addedToCart || '✓ Добавлено') : (p.addToCart || 'Добавить в корзину')}
                 </motion.button>
             </div>
         </div>

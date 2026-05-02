@@ -53,11 +53,14 @@ export default function CustomOrder() {
             data.append('name', formData.name);
             data.append('phone', formData.phone);
             data.append('comment', formData.comment);
+            data.append('customTitle', 'Индивидуальный заказ');
+            data.append('customDescription', formData.comment);
+            data.append('type', 'CUSTOM');
             data.append('address', '');
             data.append('whatsapp', false);
-            data.append('quantity', 1);
             data.append('paymentMethod', 'CASH');
             data.append('selectedOptions', JSON.stringify({ customOrder: true }));
+            data.append('items', JSON.stringify([]));
 
             files.forEach(file => {
                 data.append('images', file);

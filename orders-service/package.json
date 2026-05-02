@@ -4,7 +4,9 @@
     "description": "Orders Microservice",
     "main": "src/index.js",
     "scripts": {
-        "start": "npx prisma db push --accept-data-loss && node src/index.js"
+        "start": "npx prisma generate && node src/index.js",
+        "migrate:dev": "npx prisma migrate dev",
+        "migrate:deploy": "npx prisma migrate deploy"
     },
     "dependencies": {
         "@prisma/client": "^5.9.0",

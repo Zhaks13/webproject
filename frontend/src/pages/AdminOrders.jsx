@@ -24,8 +24,7 @@ export default function AdminOrders() {
         name: '',
         phone: '+7',
         address: '',
-        productId: '',
-        quantity: '1',
+        items: [{ productId: '', quantity: '1' }],
         paymentMethod: 'CASH',
         whatsapp: false,
         comment: '',
@@ -120,14 +119,22 @@ export default function AdminOrders() {
                     parsedSelectedOptions = { note: manualOrder.selectedOptionsInput.trim() };
                 }
             }
+
             const data = {
-                productId: manualOrder.productId || null,
+                type: 'PRODUCT',
+                items: manualOrder.items.map(i => {
+                    const selectedProduct = products.find(p => String(p.id) === String(i.productId));
+                    return {
+                        productId: i.productId ? Number(i.productId) : undefined,
+                        quantity: parseQuantity(i.quantity) || 1,
+                        productName: selectedProduct?.name
+                    };
+                }).filter(i => i.productId),
                 name: manualOrder.name || 'Ручной заказ',
                 phone: normalizePhoneInput(manualOrder.phone),
                 address: manualOrder.address,
                 comment: manualOrder.comment,
                 whatsapp: Boolean(manualOrder.whatsapp),
-                quantity: parseQuantity(manualOrder.quantity) || 1,
                 paymentMethod: manualOrder.paymentMethod || 'CASH',
                 selectedOptions: parsedSelectedOptions
             };
@@ -138,8 +145,7 @@ export default function AdminOrders() {
                 name: '',
                 phone: '+7',
                 address: '',
-                productId: '',
-                quantity: '1',
+                items: [{ productId: '', quantity: '1' }],
                 paymentMethod: 'CASH',
                 whatsapp: false,
                 comment: '',
@@ -195,14 +201,31 @@ export default function AdminOrders() {
         setManualOrder((prev) => ({ ...prev, [field]: value }));
     };
 
+    const getOrderItems = (order) => (Array.isArray(order.items) ? order.items : []);
+
+    const getTotalQuantity = (order) => (
+        getOrderItems(order).reduce((sum, item) => sum + (Number(item.quantity) || 0), 0)
+    );
+
+    const getCalculatedTotal = (order) => {
+        const items = getOrderItems(order);
+        if (Number.isFinite(Number(order.totalPrice))) {
+            return Number(order.totalPrice);
+        }
+
+        if (items.length === 0 || items.some((item) => item.price === null || item.price === undefined)) {
+            return 0;
+        }
+
+        return items.reduce((sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 0), 0);
+    };
+
     // Helper для получения инфы для модалки/карточек
     const getOrderInfo = (o) => {
-        const product = products.find(p => p.id === o.productId);
         const customer = o.name || o.customerName || 'Ручной заказ';
         const phone = o.phone || 'Нет телефона';
         const badgeStyle = getStatusStyle(o.status);
-        const productName = product ? product.name : `Товар #${o.productId}`;
-        return { product, customer, phone, badgeStyle, productName };
+        return { customer, phone, badgeStyle };
     };
 
     const filteredOrders = useMemo(() => {
@@ -262,29 +285,78 @@ export default function AdminOrders() {
                     <div className="overflow-hidden">
                         <div className="px-8 pb-8 pt-6">
                             <form onSubmit={handleCreateOrder} className="space-y-5">
-                                <div className="grid gap-4 rounded-2xl border border-zinc-100 bg-[#F5F5F7] p-4 md:grid-cols-[1.4fr_1fr_1fr]">
-                                    <div>
-                                        <label className={adminSectionLabelClassName}>Товар</label>
-                                        <select required value={manualOrder.productId} onChange={e => updateManualOrderField('productId', e.target.value)} className={`${adminFieldClassName} border-zinc-200 bg-white`}>
-                                            <option value="">Выберите товар</option>
-                                            {products.map(p => (
-                                                <option key={p.id} value={p.id}>{p.name}</option>
-                                            ))}
-                                        </select>
+
+                                <div className="space-y-4 mb-4">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <label className={adminSectionLabelClassName}>Товары</label>
+                                        <button
+                                            type="button"
+                                            onClick={() => updateManualOrderField('items', [...manualOrder.items, { productId: '', quantity: '1' }])}
+                                            className="text-xs font-bold uppercase tracking-widest text-[#2E6B50] hover:text-[#1a5a48]"
+                                        >
+                                            + Добавить товар
+                                        </button>
                                     </div>
-                                    <div>
-                                        <label className={adminSectionLabelClassName}>Цена за единицу</label>
-                                        <input type="text" readOnly value={`${formatCurrency(products.find(p => String(p.id) === String(manualOrder.productId))?.price || 0)} ₸`} className={`${adminFieldClassName} border-zinc-200 bg-white text-zinc-900`} />
-                                    </div>
-                                    <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-3">
-                                        <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Итого</p>
-                                        <p className="mt-2 text-2xl font-semibold text-zinc-950">
-                                            {formatCurrency((Number(products.find(p => String(p.id) === String(manualOrder.productId))?.price) || 0) * (parseQuantity(manualOrder.quantity) || 0))} ₸
-                                        </p>
-                                        <p className="mt-1 text-xs text-zinc-500">
-                                            {parseQuantity(manualOrder.quantity) || 0} ??. x {formatCurrency(products.find(p => String(p.id) === String(manualOrder.productId))?.price || 0)} ₸
-                                        </p>
-                                    </div>
+                                    {manualOrder.items.map((item, index) => {
+                                        const unitPrice = products.find(p => String(p.id) === String(item.productId))?.price || 0;
+                                        const qty = parseQuantity(item.quantity) || 0;
+                                        return (
+                                            <div key={index} className="grid gap-4 rounded-2xl border border-zinc-100 bg-[#F5F5F7] p-4 md:grid-cols-[1.4fr_1fr_1fr_auto]">
+                                                <div>
+                                                    <label className={adminSectionLabelClassName}>Товар</label>
+                                                    <select
+                                                        required
+                                                        value={item.productId}
+                                                        onChange={e => {
+                                                            const newItems = [...manualOrder.items];
+                                                            newItems[index].productId = e.target.value;
+                                                            updateManualOrderField('items', newItems);
+                                                        }}
+                                                        className={`${adminFieldClassName} border-zinc-200 bg-white`}
+                                                    >
+                                                        <option value="">Выберите товар</option>
+                                                        {products.map(p => (
+                                                            <option key={p.id} value={p.id}>{p.name}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label className={adminSectionLabelClassName}>Количество</label>
+                                                    <input
+                                                        type="text"
+                                                        inputMode="numeric"
+                                                        value={item.quantity}
+                                                        onChange={e => {
+                                                            const newItems = [...manualOrder.items];
+                                                            newItems[index].quantity = sanitizeQuantityInput(e.target.value);
+                                                            updateManualOrderField('items', newItems);
+                                                        }}
+                                                        placeholder="1"
+                                                        className={`${adminFieldClassName} border-zinc-200 bg-white`}
+                                                    />
+                                                </div>
+                                                <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-3">
+                                                    <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Итого</p>
+                                                    <p className="mt-2 text-xl font-semibold text-zinc-950">
+                                                        {formatCurrency(unitPrice * qty)} ₸
+                                                    </p>
+                                                </div>
+                                                {manualOrder.items.length > 1 && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const newItems = [...manualOrder.items];
+                                                            newItems.splice(index, 1);
+                                                            updateManualOrderField('items', newItems);
+                                                        }}
+                                                        className="mb-1 flex h-11 w-11 items-center justify-center rounded-xl bg-white text-zinc-400 hover:text-red-500 border border-zinc-200 self-end"
+                                                    >
+                                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"></path></svg>
+                                                    </button>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
                                 </div>
 
                                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -311,10 +383,6 @@ export default function AdminOrders() {
                                 </div>
 
                                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                    <div>
-                                        <label className={adminSectionLabelClassName}>Количество</label>
-                                        <input type="text" inputMode="numeric" value={manualOrder.quantity} onChange={e => updateManualOrderField('quantity', sanitizeQuantityInput(e.target.value))} placeholder="1" className={adminFieldClassName} />
-                                    </div>
                                     <div>
                                         <label className={adminSectionLabelClassName}>Способ оплаты</label>
                                         <select value={manualOrder.paymentMethod} onChange={e => updateManualOrderField('paymentMethod', e.target.value)} className={adminFieldClassName}>
@@ -410,15 +478,13 @@ export default function AdminOrders() {
                 ) : (
                     <div className="flex flex-col gap-4">
                         {filteredOrders.map(o => {
-                            const { customer, phone, badgeStyle, productName, product } = getOrderInfo(o);
+                            const { customer, phone, badgeStyle } = getOrderInfo(o);
                             const phoneDigits = phone.replace(/\D/g, '');
-                            const quantity = Number(o.quantity) || 1;
-                            const totalPrice = (Number(product?.price) || 0) * quantity;
-                            const unitPrice = Number(product?.price) || 0;
                             const paymentMethod = o.paymentMethod || 'CASH';
                             const createdAt = o.createdAt
                                 ? new Date(o.createdAt).toLocaleDateString('ru-RU', { day: '2-digit', month: 'short', year: 'numeric' })
                                 : 'Нет даты';
+                            const items = getOrderItems(o);
 
                             return (
                                 <div
@@ -444,13 +510,21 @@ export default function AdminOrders() {
                                                     </a>
                                                 </div>
                                                 <div className="min-w-0">
-                                                    <p className="text-[10px] uppercase font-bold tracking-[0.22em] text-zinc-400 mb-1">Товар</p>
-                                                    <p className="font-medium text-zinc-700 line-clamp-2">{productName}</p>
+                                                    <p className="text-[10px] uppercase font-bold tracking-[0.22em] text-zinc-400 mb-1">Товары ({getTotalQuantity(o)} шт.)</p>
+                                                    <div className="space-y-1 mt-1">
+                                                        {items.length === 0 ? (
+                                                            <p className="font-medium text-zinc-700 line-clamp-2 text-xs">Нет товаров</p>
+                                                        ) : items.map((item, idx) => (
+                                                            <p key={idx} className="font-medium text-zinc-700 line-clamp-2 text-[13px]">
+                                                                <span className="text-zinc-400 font-semibold">{item.quantity} x </span>
+                                                                {item.productName || `ID Товара: ${item.productId}`}
+                                                            </p>
+                                                        ))}
+                                                    </div>
                                                 </div>
                                                 <div>
-                                                    <p className="text-[10px] uppercase font-bold tracking-[0.22em] text-zinc-400 mb-1">Сумма</p>
-                                                    <p className="font-semibold text-zinc-900">{formatCurrency(totalPrice)} ₸</p>
-                                                    <p className="text-zinc-500 text-sm mt-1">{quantity} x {formatCurrency(unitPrice)} ₸</p>
+                                                    <p className="text-[10px] uppercase font-bold tracking-[0.22em] text-zinc-400 mb-1">Оплата</p>
+                                                    <p className="font-semibold text-zinc-900">{formatCurrency(getCalculatedTotal(o))} ₸</p>
                                                     <p className="text-zinc-500 text-sm mt-1">{createdAt}</p>
                                                 </div>
                                                 <div className="min-w-0">
@@ -540,16 +614,15 @@ export default function AdminOrders() {
 
                         {/* Данные для модалки */}
                         {(() => {
-                            const { customer, phone, badgeStyle, productName, product } = getOrderInfo(selectedOrder);
-                            const quantity = Number(selectedOrder.quantity) || 1;
-                            const unitPrice = Number(product?.price) || 0;
-                            const totalPrice = Number(selectedOrder.totalPrice) || (unitPrice * quantity);
+                            const { customer, phone, badgeStyle } = getOrderInfo(selectedOrder);
+                            const items = getOrderItems(selectedOrder);
                             const createdAt = selectedOrder.createdAt
                                 ? new Date(selectedOrder.createdAt).toLocaleString('ru-RU', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
                                 : 'Не указано';
                             const updatedAt = selectedOrder.updatedAt
                                 ? new Date(selectedOrder.updatedAt).toLocaleString('ru-RU', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
                                 : 'Не указано';
+
                             return (
                                 <div className="flex min-h-0 flex-1 flex-col">
                                     <div className="mb-6 flex items-start gap-3 border-b border-zinc-200 pb-5 pr-14">
@@ -576,17 +649,25 @@ export default function AdminOrders() {
                                                         <p className="text-base font-semibold text-zinc-950">{phone}</p>
                                                     </div>
                                                     <div>
-                                                        <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-400">Товар</p>
-                                                        <p className="text-base font-semibold leading-snug text-zinc-950">{productName}</p>
+                                                        <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-400">Товары ({getTotalQuantity(selectedOrder)} шт.)</p>
+                                                        <div className="space-y-2 mt-2">
+                                                            {items.length === 0 ? (
+                                                                <p className="text-sm text-zinc-600">Нет товаров</p>
+                                                            ) : items.map((item, idx) => (
+                                                                <div key={idx} className="flex justify-between items-start text-sm">
+                                                                    <span className="font-semibold text-zinc-950 pr-2">
+                                                                        <span className="text-zinc-500">{item.quantity} x</span> {item.productName || `ID Товара: ${item.productId}`}
+                                                                    </span>
+                                                                    {item.price && (
+                                                                        <span className="text-zinc-500 whitespace-nowrap">{formatCurrency(Number(item.price) * parseQuantity(item.quantity))} ₸</span>
+                                                                    )}
+                                                                </div>
+                                                            ))}
+                                                        </div>
                                                     </div>
                                                     <div>
-                                                        <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-400">Количество</p>
-                                                        <p className="text-base font-semibold text-zinc-950">{quantity}</p>
-                                                    </div>
-                                                    <div>
-                                                        <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-400">Сумма</p>
-                                                        <p className="text-base font-semibold text-zinc-950">{formatCurrency(totalPrice)} ₸</p>
-                                                        <p className="mt-1 text-sm text-zinc-500">{quantity} x {formatCurrency(unitPrice)} ₸</p>
+                                                        <p className="mb-1 mt-2 text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-400">Общая сумма</p>
+                                                        <p className="text-lg font-semibold text-zinc-950">{formatCurrency(getCalculatedTotal(selectedOrder))} ₸</p>
                                                     </div>
                                                     <div>
                                                         <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-400">Адрес</p>
@@ -704,4 +785,3 @@ export default function AdminOrders() {
         </div>
     );
 }
-

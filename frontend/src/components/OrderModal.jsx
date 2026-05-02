@@ -17,7 +17,7 @@ import {
 const fieldBaseClassName = 'w-full rounded-xl border px-3.5 py-3 text-sm text-[#051F20] outline-none transition-all duration-200 placeholder:text-gray-300';
 const fieldIdleClassName = 'border-gray-200 bg-white focus:border-[#2E6B50] focus:ring-4 focus:ring-[#2E6B50]/10';
 const fieldErrorClassName = 'border-red-300 bg-red-50/60 focus:border-red-400 focus:ring-4 focus:ring-red-100';
-const requiredFields = ['name', 'phone', 'address', 'quantity', 'paymentMethod'];
+const requiredFields = ['name', 'phone', 'address', 'paymentMethod'];
 
 function getUserFromStorage() {
     try {
@@ -37,6 +37,8 @@ export default function OrderModal({ isOpen, onClose, product, selectedOptions =
 
     const [formData, setFormData] = useState(initialState);
     const [submitting, setSubmitting] = useState(false);
+    const [products, setProducts] = useState([]);
+    const [items, setItems] = useState([{ productId: product?.id || '', quantity: 1 }]);
     const [submitAttempted, setSubmitAttempted] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
     const [submitError, setSubmitError] = useState('');
@@ -56,6 +58,8 @@ export default function OrderModal({ isOpen, onClose, product, selectedOptions =
         setSubmitAttempted(false);
         setSubmitError('');
         setSuccessMessage('');
+        setItems([{ productId: product?.id || '', quantity: 1 }]);
+        api.get('/products').then(res => setProducts(res.data)).catch(console.error);
 
         const focusTimer = window.setTimeout(() => {
             firstInputRef.current?.focus();
@@ -74,7 +78,7 @@ export default function OrderModal({ isOpen, onClose, product, selectedOptions =
             window.clearTimeout(focusTimer);
             window.removeEventListener('keydown', handleEscape);
         };
-    }, [initialState, isOpen]);
+    }, [initialState, isOpen, product]);
 
     useEffect(() => {
         return () => {
@@ -85,10 +89,26 @@ export default function OrderModal({ isOpen, onClose, product, selectedOptions =
     }, []);
 
     const errors = useMemo(() => validateOrderForm(formData), [formData]);
-    const unitPrice = useMemo(() => parsePrice(product?.price), [product?.price]);
-    const quantityValue = parseQuantity(formData.quantity) || 0;
-    const totalPrice = unitPrice * quantityValue;
-    const isFormValid = hasRequiredOrderFields(formData) && Object.keys(errors).length === 0;
+    const isFormValid = hasRequiredOrderFields(formData) && Object.keys(errors).length === 0 && items.length > 0 && items.every(i => i.productId && (parseQuantity(i.quantity) || 0) > 0);
+
+    const totalPrice = useMemo(() => {
+        return items.reduce((sum, item) => {
+            const p = products.find(p => String(p.id) === String(item.productId));
+            const pPrice = parsePrice(p?.price || 0) || (String(item.productId) === String(product?.id) ? parsePrice(product?.price) : 0);
+            return sum + (pPrice * (parseQuantity(item.quantity) || 0));
+        }, 0);
+    }, [items, products, product]);
+
+    const addItem = () => setItems(prev => [...prev, { productId: '', quantity: 1 }]);
+    const removeItem = (index) => setItems(prev => prev.filter((_, i) => i !== index));
+    const updateItem = (index, field, value) => {
+        setItems(prev => {
+            const newItems = [...prev];
+            newItems[index] = { ...newItems[index], [field]: value };
+            return newItems;
+        });
+    };
+
     const showValidationSummary = submitAttempted && !isFormValid;
     const isSubmitDisabled = !isFormValid || submitting || Boolean(successMessage);
 
@@ -171,10 +191,17 @@ export default function OrderModal({ isOpen, onClose, product, selectedOptions =
         try {
             const token = localStorage.getItem('token');
             const data = {
-                productId: product?.id,
                 ...formData,
+                type: 'PRODUCT',
+                items: items.map(i => {
+                    const p = products.find(p => String(p.id) === String(i.productId));
+                    return {
+                        productId: Number(i.productId),
+                        quantity: parseQuantity(i.quantity),
+                        productName: p?.name || (String(i.productId) === String(product?.id) ? product?.name : undefined)
+                    };
+                }),
                 phone: normalizePhoneInput(formData.phone),
-                quantity: parseQuantity(formData.quantity),
                 name: formData.name.trim(),
                 address: formData.address.trim(),
                 comment: formData.comment.trim()
@@ -186,6 +213,7 @@ export default function OrderModal({ isOpen, onClose, product, selectedOptions =
 
             setSuccessMessage('Заказ оформлен. Мы свяжемся с вами');
             setFormData(initialState);
+            setItems([{ productId: product?.id || '', quantity: 1 }]);
             setTouchedFields({});
             setSubmitAttempted(false);
 
@@ -242,43 +270,64 @@ export default function OrderModal({ isOpen, onClose, product, selectedOptions =
                         </div>
 
                         <div className="px-6 py-6 md:px-8 md:py-8">
-                            <div className="mb-6 grid gap-4 rounded-2xl border border-gray-100 bg-[#F5F5F7] p-4 md:grid-cols-[1.4fr_1fr_1fr]">
-                                <div>
-                                    <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.24em] text-gray-400">
-                                        Товар
-                                    </label>
-                                    <input
-                                        type="text"
-                                        readOnly
-                                        value={product?.name || 'Товар'}
-                                        className={`${fieldBaseClassName} border-gray-200 bg-white/90 text-[#0D3B2E]`}
-                                        tabIndex={-1}
-                                    />
-                                </div>
+                            <div className="mb-6 space-y-4">
+                                {items.map((item, index) => {
+                                    const p = products.find(p => String(p.id) === String(item.productId));
+                                    const pPrice = parsePrice(p?.price || 0) || (String(item.productId) === String(product?.id) ? parsePrice(product?.price) : 0);
+                                    const itemTotal = pPrice * (parseQuantity(item.quantity) || 0);
 
-                                <div>
-                                    <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.24em] text-gray-400">
-                                        Цена за единицу
-                                    </label>
-                                    <input
-                                        type="text"
-                                        readOnly
-                                        value={formatPrice(unitPrice)}
-                                        className={`${fieldBaseClassName} border-gray-200 bg-white/90 text-[#0D3B2E]`}
-                                        tabIndex={-1}
-                                    />
-                                </div>
-
-                                <div className="rounded-2xl border border-[#2E6B50]/10 bg-white px-4 py-3">
-                                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-gray-400">
-                                        Итого
-                                    </p>
-                                    <p className="mt-2 text-2xl font-semibold text-[#0D3B2E]">
-                                        {formatPrice(totalPrice)}
-                                    </p>
-                                    <p className="mt-1 text-xs text-gray-500">
-                                        {quantityValue || 0} шт. x {formatPrice(unitPrice)}
-                                    </p>
+                                    return (
+                                        <div key={index} className="grid items-end gap-3 rounded-2xl border border-gray-100 bg-[#F5F5F7] p-4 md:grid-cols-[1.5fr_1fr_1fr_auto]">
+                                            <div>
+                                                <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.24em] text-gray-400">Товар</label>
+                                                <select
+                                                    value={item.productId}
+                                                    onChange={(e) => updateItem(index, 'productId', e.target.value)}
+                                                    className={`${fieldBaseClassName} border-gray-200 bg-white text-[#0D3B2E]`}
+                                                >
+                                                    <option value="">Выберите товар</option>
+                                                    {product && !products.find(p => String(p.id) === String(product.id)) && (
+                                                        <option value={product.id}>{product.name}</option>
+                                                    )}
+                                                    {products.map(p => (
+                                                        <option key={p.id} value={p.id}>{p.name}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.24em] text-gray-400">Количество</label>
+                                                <input
+                                                    type="text"
+                                                    inputMode="numeric"
+                                                    value={item.quantity}
+                                                    onChange={(e) => updateItem(index, 'quantity', sanitizeQuantityInput(e.target.value))}
+                                                    className={`${fieldBaseClassName} border-gray-200 bg-white text-[#0D3B2E]`}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.24em] text-gray-400">Сумма</label>
+                                                <div className={`${fieldBaseClassName} border-transparent bg-transparent pl-0 font-semibold text-[#0D3B2E] text-lg`}>
+                                                    {formatPrice(itemTotal)}
+                                                </div>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => removeItem(index)}
+                                                className="mb-1 flex h-11 w-11 items-center justify-center rounded-xl bg-white text-gray-400 hover:text-red-500"
+                                            >
+                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18" /><path d="M6 6L18 18" /></svg>
+                                            </button>
+                                        </div>
+                                    );
+                                })}
+                                <div className="flex items-center justify-between px-2">
+                                    <button type="button" onClick={addItem} className="text-sm font-semibold uppercase tracking-wider text-[#2E6B50] hover:underline">
+                                        + Добавить товар
+                                    </button>
+                                    <div className="text-right">
+                                        <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-gray-400">Общая сумма</p>
+                                        <p className="text-2xl font-semibold text-[#0D3B2E]">{formatPrice(totalPrice)}</p>
+                                    </div>
                                 </div>
                             </div>
 
@@ -314,183 +363,162 @@ export default function OrderModal({ isOpen, onClose, product, selectedOptions =
 
                             <form onSubmit={handleSubmit} className="space-y-5" noValidate aria-busy={submitting}>
                                 <fieldset disabled={submitting || Boolean(successMessage)} className="space-y-5 disabled:cursor-not-allowed disabled:opacity-95">
-                                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                        <div>
+                                            <label htmlFor="order-name" className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.24em] text-gray-400">
+                                                Имя
+                                            </label>
+                                            <input
+                                                id="order-name"
+                                                ref={(node) => {
+                                                    firstInputRef.current = node;
+                                                    setFieldRef('name', node);
+                                                }}
+                                                type="text"
+                                                autoComplete="name"
+                                                value={formData.name}
+                                                onChange={(event) => updateField('name', sanitizeNameInput(event.target.value))}
+                                                onBlur={() => markTouched('name')}
+                                                className={getFieldClassName('name')}
+                                                placeholder="Иван Иванов"
+                                                aria-invalid={Boolean(getFieldError('name'))}
+                                                aria-describedby="order-name-hint order-name-error"
+                                            />
+                                            <p id="order-name-hint" className="mt-2 text-xs text-gray-500">
+                                                Укажите имя не короче 2 символов.
+                                            </p>
+                                            {getFieldError('name') && (
+                                                <p id="order-name-error" className="mt-2 text-sm text-red-600">{errors.name}</p>
+                                            )}
+                                        </div>
+
+                                        <div>
+                                            <label htmlFor="order-phone" className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.24em] text-gray-400">
+                                                Телефон
+                                            </label>
+                                            <input
+                                                id="order-phone"
+                                                ref={(node) => setFieldRef('phone', node)}
+                                                type="tel"
+                                                autoComplete="tel"
+                                                inputMode="numeric"
+                                                value={formatPhoneDisplay(formData.phone)}
+                                                onChange={(event) => updateField('phone', normalizePhoneInput(event.target.value))}
+                                                onBlur={() => markTouched('phone')}
+                                                onKeyDown={handlePhoneKeyDown}
+                                                className={getFieldClassName('phone')}
+                                                placeholder="+7 (___) ___-__-__"
+                                                aria-invalid={Boolean(getFieldError('phone'))}
+                                                aria-describedby="order-phone-hint order-phone-error"
+                                            />
+                                            <p id="order-phone-hint" className="mt-2 text-xs text-gray-500">
+                                                Номер нужен в формате +7XXXXXXXXXX.
+                                            </p>
+                                            {getFieldError('phone') && (
+                                                <p id="order-phone-error" className="mt-2 text-sm text-red-600">{errors.phone}</p>
+                                            )}
+                                        </div>
+                                    </div>
+
                                     <div>
-                                        <label htmlFor="order-name" className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.24em] text-gray-400">
-                                            Имя
+                                        <label htmlFor="order-address" className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.24em] text-gray-400">
+                                            Адрес доставки
                                         </label>
                                         <input
-                                            id="order-name"
-                                            ref={(node) => {
-                                                firstInputRef.current = node;
-                                                setFieldRef('name', node);
-                                            }}
+                                            id="order-address"
+                                            ref={(node) => setFieldRef('address', node)}
                                             type="text"
-                                            autoComplete="name"
-                                            value={formData.name}
-                                            onChange={(event) => updateField('name', sanitizeNameInput(event.target.value))}
-                                            onBlur={() => markTouched('name')}
-                                            className={getFieldClassName('name')}
-                                            placeholder="Иван Иванов"
-                                            aria-invalid={Boolean(getFieldError('name'))}
-                                            aria-describedby="order-name-hint order-name-error"
+                                            autoComplete="street-address"
+                                            value={formData.address}
+                                            onChange={(event) => updateField('address', event.target.value)}
+                                            onBlur={() => markTouched('address')}
+                                            className={getFieldClassName('address')}
+                                            placeholder="Город, улица, дом"
+                                            aria-invalid={Boolean(getFieldError('address'))}
+                                            aria-describedby="order-address-hint order-address-error"
                                         />
-                                        <p id="order-name-hint" className="mt-2 text-xs text-gray-500">
-                                            Укажите имя не короче 2 символов.
+                                        <p id="order-address-hint" className="mt-2 text-xs text-gray-500">
+                                            Добавьте полный адрес доставки, чтобы мы могли подтвердить заказ быстрее.
                                         </p>
-                                        {getFieldError('name') && (
-                                            <p id="order-name-error" className="mt-2 text-sm text-red-600">{errors.name}</p>
+                                        {getFieldError('address') && (
+                                            <p id="order-address-error" className="mt-2 text-sm text-red-600">{errors.address}</p>
                                         )}
                                     </div>
 
-                                    <div>
-                                        <label htmlFor="order-phone" className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.24em] text-gray-400">
-                                            Телефон
+                                    <div className="rounded-2xl border border-gray-100 bg-[#DAF1DE]/20 px-4 py-3">
+                                        <label htmlFor="whatsapp" className="flex cursor-pointer items-center gap-3">
+                                            <input
+                                                id="whatsapp"
+                                                type="checkbox"
+                                                checked={formData.whatsapp}
+                                                onChange={(event) => setFormData((prev) => ({ ...prev, whatsapp: event.target.checked }))}
+                                                className="h-4 w-4 cursor-pointer accent-[#2E6B50]"
+                                            />
+                                            <span className="text-sm text-[#0D3B2E]">Связаться по WhatsApp</span>
                                         </label>
-                                        <input
-                                            id="order-phone"
-                                            ref={(node) => setFieldRef('phone', node)}
-                                            type="tel"
-                                            autoComplete="tel"
-                                            inputMode="numeric"
-                                            value={formatPhoneDisplay(formData.phone)}
-                                            onChange={(event) => updateField('phone', normalizePhoneInput(event.target.value))}
-                                            onBlur={() => markTouched('phone')}
-                                            onKeyDown={handlePhoneKeyDown}
-                                            className={getFieldClassName('phone')}
-                                            placeholder="+7 (___) ___-__-__"
-                                            aria-invalid={Boolean(getFieldError('phone'))}
-                                            aria-describedby="order-phone-hint order-phone-error"
-                                        />
-                                        <p id="order-phone-hint" className="mt-2 text-xs text-gray-500">
-                                            Номер нужен в формате +7XXXXXXXXXX.
-                                        </p>
-                                        {getFieldError('phone') && (
-                                            <p id="order-phone-error" className="mt-2 text-sm text-red-600">{errors.phone}</p>
-                                        )}
                                     </div>
-                                </div>
 
-                                <div>
-                                    <label htmlFor="order-address" className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.24em] text-gray-400">
-                                        Адрес доставки
-                                    </label>
-                                    <input
-                                        id="order-address"
-                                        ref={(node) => setFieldRef('address', node)}
-                                        type="text"
-                                        autoComplete="street-address"
-                                        value={formData.address}
-                                        onChange={(event) => updateField('address', event.target.value)}
-                                        onBlur={() => markTouched('address')}
-                                        className={getFieldClassName('address')}
-                                        placeholder="Город, улица, дом"
-                                        aria-invalid={Boolean(getFieldError('address'))}
-                                        aria-describedby="order-address-hint order-address-error"
-                                    />
-                                    <p id="order-address-hint" className="mt-2 text-xs text-gray-500">
-                                        Добавьте полный адрес доставки, чтобы мы могли подтвердить заказ быстрее.
-                                    </p>
-                                    {getFieldError('address') && (
-                                        <p id="order-address-error" className="mt-2 text-sm text-red-600">{errors.address}</p>
-                                    )}
-                                </div>
-
-                                <div className="rounded-2xl border border-gray-100 bg-[#DAF1DE]/20 px-4 py-3">
-                                    <label htmlFor="whatsapp" className="flex cursor-pointer items-center gap-3">
-                                        <input
-                                            id="whatsapp"
-                                            type="checkbox"
-                                            checked={formData.whatsapp}
-                                            onChange={(event) => setFormData((prev) => ({ ...prev, whatsapp: event.target.checked }))}
-                                            className="h-4 w-4 cursor-pointer accent-[#2E6B50]"
-                                        />
-                                        <span className="text-sm text-[#0D3B2E]">Связаться по WhatsApp</span>
-                                    </label>
-                                </div>
-
-                                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                    <div>
-                                        <label htmlFor="order-quantity" className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.24em] text-gray-400">
-                                            Количество
-                                        </label>
-                                        <input
-                                            id="order-quantity"
-                                            ref={(node) => setFieldRef('quantity', node)}
-                                            type="text"
-                                            inputMode="numeric"
-                                            value={formData.quantity}
-                                            onChange={(event) => updateField('quantity', sanitizeQuantityInput(event.target.value))}
-                                            onBlur={() => markTouched('quantity')}
-                                            className={getFieldClassName('quantity')}
-                                            placeholder="1"
-                                            aria-invalid={Boolean(getFieldError('quantity'))}
-                                        />
-                                        {getFieldError('quantity') && (
-                                            <p className="mt-2 text-sm text-red-600">{errors.quantity}</p>
-                                        )}
+                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                        <div>
+                                            <label htmlFor="order-payment" className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.24em] text-gray-400">
+                                                Способ оплаты
+                                            </label>
+                                            <select
+                                                id="order-payment"
+                                                ref={(node) => setFieldRef('paymentMethod', node)}
+                                                value={formData.paymentMethod}
+                                                onChange={(event) => updateField('paymentMethod', event.target.value)}
+                                                onBlur={() => markTouched('paymentMethod')}
+                                                className={getFieldClassName('paymentMethod')}
+                                                aria-invalid={Boolean(getFieldError('paymentMethod'))}
+                                            >
+                                                <option value="CASH">Наличными при получении</option>
+                                                <option value="CARD">Перевод на карту</option>
+                                            </select>
+                                            {getFieldError('paymentMethod') && (
+                                                <p className="mt-2 text-sm text-red-600">{errors.paymentMethod}</p>
+                                            )}
+                                        </div>
                                     </div>
 
                                     <div>
-                                        <label htmlFor="order-payment" className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.24em] text-gray-400">
-                                            Способ оплаты
+                                        <label htmlFor="order-comment" className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.24em] text-gray-400">
+                                            Комментарий
                                         </label>
-                                        <select
-                                            id="order-payment"
-                                            ref={(node) => setFieldRef('paymentMethod', node)}
-                                            value={formData.paymentMethod}
-                                            onChange={(event) => updateField('paymentMethod', event.target.value)}
-                                            onBlur={() => markTouched('paymentMethod')}
-                                            className={getFieldClassName('paymentMethod')}
-                                            aria-invalid={Boolean(getFieldError('paymentMethod'))}
+                                        <textarea
+                                            id="order-comment"
+                                            rows="4"
+                                            value={formData.comment}
+                                            onChange={(event) => setFormData((prev) => ({ ...prev, comment: event.target.value }))}
+                                            className={`${fieldBaseClassName} ${fieldIdleClassName} resize-none`}
+                                            placeholder="Уточнения к заказу, удобное время для связи и пожелания"
+                                        />
+                                    </div>
+
+                                    <div className="flex flex-col gap-3 border-t border-gray-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
+                                        <button
+                                            type="button"
+                                            onClick={handleClose}
+                                            disabled={submitting}
+                                            className="order-2 px-5 py-3 text-sm uppercase tracking-[0.2em] text-gray-500 transition-colors hover:text-gray-800 sm:order-1"
                                         >
-                                            <option value="CASH">Наличными при получении</option>
-                                            <option value="CARD">Перевод на карту</option>
-                                        </select>
-                                        {getFieldError('paymentMethod') && (
-                                            <p className="mt-2 text-sm text-red-600">{errors.paymentMethod}</p>
-                                        )}
+                                            Отмена
+                                        </button>
+
+                                        <button
+                                            type="submit"
+                                            disabled={isSubmitDisabled}
+                                            className={`order-1 inline-flex min-w-[220px] items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm uppercase tracking-[0.2em] transition-all sm:order-2 ${isSubmitDisabled
+                                                ? 'cursor-not-allowed bg-[#0D3B2E]/45 text-white'
+                                                : 'bg-[#0D3B2E] text-[#DAF1DE] hover:bg-[#1a5a48]'
+                                                }`}
+                                        >
+                                            {submitting && (
+                                                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                                            )}
+                                            {successMessage ? 'Заказ оформлен' : submitting ? 'Оформление...' : 'Заказать'}
+                                        </button>
                                     </div>
-                                </div>
-
-                                <div>
-                                    <label htmlFor="order-comment" className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.24em] text-gray-400">
-                                        Комментарий
-                                    </label>
-                                    <textarea
-                                        id="order-comment"
-                                        rows="4"
-                                        value={formData.comment}
-                                        onChange={(event) => setFormData((prev) => ({ ...prev, comment: event.target.value }))}
-                                        className={`${fieldBaseClassName} ${fieldIdleClassName} resize-none`}
-                                        placeholder="Уточнения к заказу, удобное время для связи и пожелания"
-                                    />
-                                </div>
-
-                                <div className="flex flex-col gap-3 border-t border-gray-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
-                                    <button
-                                        type="button"
-                                        onClick={handleClose}
-                                        disabled={submitting}
-                                        className="order-2 px-5 py-3 text-sm uppercase tracking-[0.2em] text-gray-500 transition-colors hover:text-gray-800 sm:order-1"
-                                    >
-                                        Отмена
-                                    </button>
-
-                                    <button
-                                        type="submit"
-                                        disabled={isSubmitDisabled}
-                                        className={`order-1 inline-flex min-w-[220px] items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm uppercase tracking-[0.2em] transition-all sm:order-2 ${isSubmitDisabled
-                                            ? 'cursor-not-allowed bg-[#0D3B2E]/45 text-white'
-                                            : 'bg-[#0D3B2E] text-[#DAF1DE] hover:bg-[#1a5a48]'
-                                            }`}
-                                    >
-                                        {submitting && (
-                                            <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                                        )}
-                                        {successMessage ? 'Заказ оформлен' : submitting ? 'Оформление...' : 'Заказать'}
-                                    </button>
-                                </div>
                                 </fieldset>
                             </form>
                         </div>

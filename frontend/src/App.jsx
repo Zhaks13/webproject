@@ -1,10 +1,12 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { LanguageProvider } from './context/LanguageContext';
+import { CartProvider } from './context/CartContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Home from './pages/Home';
 import Products from './pages/Products';
 import ProductDetails from './pages/ProductDetails';
+import Cart from './pages/Cart';
 import CustomOrder from './pages/CustomOrder';
 import Contacts from './pages/Contacts';
 import AdminDashboard from './pages/AdminDashboard';
@@ -13,6 +15,7 @@ import AdminOrders from './pages/AdminOrders';
 import AuthPage from './pages/AuthPage';
 import ProfilePage from './pages/ProfilePage';
 import ProtectedRoute from './components/ProtectedRoute';
+import CartToast from './components/CartToast';
 
 function AppRoutes() {
     return (
@@ -23,6 +26,7 @@ function AppRoutes() {
                     <Route path="/" element={<Home />} />
                     <Route path="/catalog" element={<Products />} />
                     <Route path="/product/:id" element={<ProductDetails />} />
+                    <Route path="/cart" element={<Cart />} />
                     <Route path="/custom-order" element={<CustomOrder />} />
                     <Route path="/contacts" element={<Contacts />} />
                     <Route path="/admin" element={
@@ -49,6 +53,7 @@ function AppRoutes() {
                 </Routes>
             </main>
             <Footer />
+            <CartToast />
         </div>
     );
 }
@@ -56,9 +61,11 @@ function AppRoutes() {
 function App() {
     return (
         <LanguageProvider>
-            <BrowserRouter>
-                <AppRoutes />
-            </BrowserRouter>
+            <CartProvider>
+                <BrowserRouter>
+                    <AppRoutes />
+                </BrowserRouter>
+            </CartProvider>
         </LanguageProvider>
     );
 }

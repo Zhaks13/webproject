@@ -1,18 +1,22 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { api } from '../api';
 import { getImageUrl } from '../utils/image';
-import OrderModal from '../components/OrderModal';
+import { useCart } from '../context/CartContext';
+import { useLang } from '../context/LanguageContext';
 import ImageGallery from '../components/product/StickyGallery';
 import ProductInfo from '../components/product/ProductInfo';
 
 export default function ProductDetails() {
     const { id } = useParams();
+    const navigate = useNavigate();
+    const { addItem } = useCart();
+    const { t } = useLang();
     const [product, setProduct] = useState(null);
     const [allProducts, setAllProducts] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [added, setAdded] = useState(false);
 
     useEffect(() => {
         loadData();
@@ -32,14 +36,17 @@ export default function ProductDetails() {
         }
     };
 
-    const openModal = () => {
-        const userString = localStorage.getItem('user');
-        const user = userString ? JSON.parse(userString) : null;
-        if (!user) {
-            alert('Пожалуйста, войдите в систему, чтобы сделать заказ.');
-            return;
-        }
-        setIsModalOpen(true);
+    const handleAddToCart = () => {
+        if (!product) return;
+        addItem({
+            productId: product.id,
+            name: product.name,
+            price: product.price,
+            image: product.images?.[0] || product.image || null,
+            quantity: 1
+        });
+        setAdded(true);
+        setTimeout(() => setAdded(false), 1500);
     };
 
     if (loading) return (
@@ -59,13 +66,6 @@ export default function ProductDetails() {
 
     return (
         <div className="bg-[#f5f5f5] text-[#111] min-h-screen font-sans">
-            <OrderModal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                product={product}
-                selectedOptions={{}}
-            />
-
             {/* Мобильная навигация */}
             <div className="px-6 pt-8 pb-4 lg:hidden">
                 <Link to="/catalog" className="text-xs uppercase tracking-widest font-bold text-zinc-400 hover:text-[#111] transition-colors">
@@ -82,7 +82,7 @@ export default function ProductDetails() {
 
                 {/* ПРАВАЯ: ProductInfo */}
                 <div className="w-1/2 overflow-y-auto">
-                    <ProductInfo product={product} openModal={openModal} />
+                    <ProductInfo product={product} onAddToCart={handleAddToCart} added={added} />
                 </div>
             </div>
 
@@ -119,10 +119,13 @@ export default function ProductDetails() {
                 </div>
 
                 <button
-                    onClick={openModal}
-                    className="w-full bg-[#111] text-white py-5 rounded-2xl text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-opacity"
+                    onClick={handleAddToCart}
+                    className={`w-full py-5 rounded-2xl text-xs font-bold uppercase tracking-widest transition-all duration-300 ${added
+                            ? 'bg-emerald-600 text-white'
+                            : 'bg-[#111] text-white hover:opacity-90'
+                        }`}
                 >
-                    Заказать проект
+                    {added ? (t.product.addedToCart || '✓ Добавлено') : (t.product.addToCart || 'Добавить в корзину')}
                 </button>
             </div>
 

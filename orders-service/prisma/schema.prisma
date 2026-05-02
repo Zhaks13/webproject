@@ -1,40 +1,77 @@
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  schemas  = ["orders"]
 }
 
 model User {
   id        Int      @id @default(autoincrement())
   name      String
-  phone     String   @unique   // 👈 ВАЖНО
+  phone     String   @unique
   password  String
   role      String   @default("USER")
   createdAt DateTime @default(now())
+
   orders    Order[]
+
+  @@schema("orders")
+}
+
+enum OrderType {
+  PRODUCT
+  CUSTOM
+
+  @@schema("orders")
 }
 
 model Order {
-  id              Int      @id @default(autoincrement())
-  name            String
-  phone           String
-  address         String?
-  whatsapp        Boolean? @default(false)
-  quantity        Int      @default(1)
-  paymentMethod   String   @default("CASH")
-  comment         String?
-  adminComment    String?
-  source          String   @default("WEB")
-  totalPrice      Float?
-  selectedOptions Json?
-  status          String   @default("NEW") // "NEW", "IN_PROGRESS", "READY"
-  productId       Int?
-  images          String[]
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  userId       Int?
-  user         User?    @relation(fields: [userId], references: [id])
+  id                Int       @id @default(autoincrement())
+  name              String
+  phone             String
+  address           String?
+  whatsapp          Boolean?  @default(false)
+  paymentMethod     String    @default("CASH")
+  comment           String?
+  adminComment      String?
+  source            String    @default("WEB")
+  totalPrice        Float?
+  selectedOptions   Json?
+  status            String    @default("NEW")
+
+  type              OrderType @default(PRODUCT)
+  displayName       String?
+  customTitle       String?
+  customDescription String?
+
+  images            String[]
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  userId            Int?
+  user              User?     @relation(fields: [userId], references: [id])
+  items             OrderItem[]
+
+  @@schema("orders")
+}
+
+model OrderItem {
+  id        Int      @id @default(autoincrement())
+
+  orderId   Int
+  order     Order    @relation(fields: [orderId], references: [id])
+
+  productId Int
+
+  quantity  Int      @default(1)
+  price     Float?
+
+  createdAt DateTime @default(now())
+
+  @@schema("orders")
 }
