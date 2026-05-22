@@ -8,6 +8,8 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
+const { sendOrderNotification } = require('./services/telegram');
+
 const app = express();
 const prisma = new PrismaClient();
 
@@ -347,6 +349,19 @@ app.post('/orders', upload.array('images', 5), async (req, res) => {
         });
 
         res.status(201).json(serializeOrder(order));
+
+        try {
+            const orderForTelegram = { ...order };
+            if (resolvedItems && resolvedItems.items && orderForTelegram.items) {
+                orderForTelegram.items = orderForTelegram.items.map(item => {
+                    const resolved = resolvedItems.items.find(ri => ri.productId === item.productId);
+                    return { ...item, name: resolved ? resolved.productName : undefined };
+                });
+            }
+            sendOrderNotification(orderForTelegram);
+        } catch (err) {
+            console.error('Telegram notification trigger failed:', err);
+        }
     } catch (error) {
         console.error('CREATE ORDER ERROR:', error);
         res.status(error.statusCode || 500).json({ error: error.message });
