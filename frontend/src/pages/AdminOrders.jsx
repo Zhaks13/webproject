@@ -8,18 +8,21 @@ import {
     sanitizeNameInput,
     sanitizeQuantityInput
 } from '../utils/orderForm';
+import { useLang } from '../context/LanguageContext';
 
 const adminFieldClassName = 'w-full rounded-xl border border-transparent bg-[#f5f5f5] px-4 py-3 text-sm font-medium outline-none transition-colors focus:border-zinc-300';
 const adminSectionLabelClassName = 'mb-2 block text-[10px] font-bold uppercase tracking-widest text-zinc-400';
 
 export default function AdminOrders() {
+    const { t, lang } = useLang();
+    const a = t.admin.orders;
     const [orders, setOrders] = useState([]);
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [updatingStatusId, setUpdatingStatusId] = useState(null);
 
-    // Ручное создание заказа
+    // Manual order creation
     const [manualOrder, setManualOrder] = useState({
         name: '',
         phone: '+7',
@@ -33,7 +36,7 @@ export default function AdminOrders() {
     const [creatingOrder, setCreatingOrder] = useState(false);
     const [isManualOrderOpen, setIsManualOrderOpen] = useState(false);
 
-    // Просмотр деталей заказа (Modal)
+    // Order details modal
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState(['NEW', 'IN_PROGRESS', 'DONE', 'CANCELLED']);
@@ -57,11 +60,11 @@ export default function AdminOrders() {
                 api.get('/orders'),
                 api.get('/products')
             ]);
-            setOrders(oRes.data);
-            setProducts(pRes.data);
+            setOrders(Array.isArray(oRes.data) ? oRes.data : []);
+            setProducts(Array.isArray(pRes.data) ? pRes.data : []);
         } catch (e) {
             console.error('Failed to load admin orders', e);
-            setError('Ошибка загрузки данных.');
+            setError(a.loadError);
         } finally {
             setLoading(false);
         }
@@ -71,15 +74,15 @@ export default function AdminOrders() {
         setUpdatingStatusId(id);
         try {
             await api.put(`/orders/${id}/status`, { status });
-            // Обновляем список, чтобы не перегружать всю страницу
+            // Update the list without reloading the page.
             setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
-            // Если выбранный заказ сейчас открыт в модалке, обновляем и его статус
+            // Keep the opened modal in sync.
             if (selectedOrder?.id === id) {
                 setSelectedOrder(prev => ({ ...prev, status }));
             }
         } catch (e) {
             console.error(e);
-            alert('Ошибка обновления статуса заказа');
+            alert(a.statusUpdateError);
         } finally {
             setUpdatingStatusId(null);
         }
@@ -99,7 +102,7 @@ export default function AdminOrders() {
             setSelectedOrder(data);
         } catch (e) {
             console.error(e);
-            alert('Ошибка сохранения комментария администратора');
+            alert(a.commentSaveError);
         } finally {
             setSavingAdminComment(false);
         }
@@ -130,7 +133,7 @@ export default function AdminOrders() {
                         productName: selectedProduct?.name
                     };
                 }).filter(i => i.productId),
-                name: manualOrder.name || 'Ручной заказ',
+                name: manualOrder.name || t('common.manualOrder'),
                 phone: normalizePhoneInput(manualOrder.phone),
                 address: manualOrder.address,
                 comment: manualOrder.comment,
@@ -154,7 +157,7 @@ export default function AdminOrders() {
             await loadData();
         } catch (e) {
             console.error(e);
-            alert('Ошибка создания заказа');
+            alert(a.createError);
         } finally {
             setCreatingOrder(false);
         }
@@ -189,6 +192,9 @@ export default function AdminOrders() {
         return normalized;
     };
 
+    const translateStatus = (status) => t(`statuses.${normalizeOrderStatus(status)}`) || normalizeOrderStatus(status);
+    const getPaymentLabel = (method) => (method === 'CARD' ? a.card : a.cash);
+
     const toggleStatusFilter = (value) => {
         setStatusFilter((prev) => (
             prev.includes(value)
@@ -220,10 +226,10 @@ export default function AdminOrders() {
         return items.reduce((sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 0), 0);
     };
 
-    // Helper для получения инфы для модалки/карточек
+    // Shared card/modal display data.
     const getOrderInfo = (o) => {
-        const customer = o.name || o.customerName || 'Ручной заказ';
-        const phone = o.phone || 'Нет телефона';
+        const customer = o.name || o.customerName || t('common.manualOrder');
+        const phone = o.phone || a.noPhone;
         const badgeStyle = getStatusStyle(o.status);
         return { customer, phone, badgeStyle };
     };
@@ -250,7 +256,7 @@ export default function AdminOrders() {
 
     return (
         <div className="max-w-[1200px] mx-auto px-6 lg:px-12 pb-24 font-sans text-zinc-900 bg-[#f5f5f5] min-h-screen">
-            <h1 className="text-4xl font-bold tracking-tighter mb-8 pt-8">Панель Управления</h1>
+            <h1 className="text-4xl font-bold tracking-tighter mb-8 pt-8">{a.title}</h1>
 
             <AdminTabs />
 
@@ -260,9 +266,9 @@ export default function AdminOrders() {
                 </div>
             )}
 
-            {/* РУЧНОЕ СОЗДАНИЕ ЗАКАЗА */}
+            {/* Manual order creation */}
             <div className="mb-12 overflow-hidden rounded-2xl bg-white shadow-sm [&>h2]:hidden">
-                <h2 className="text-xl font-bold tracking-tight mb-6">Создать заказ вручную</h2>
+                <h2 className="text-xl font-bold tracking-tight mb-6">{a.manualCreate}</h2>
                 <button
                     type="button"
                     onClick={() => setIsManualOrderOpen((prev) => !prev)}
@@ -270,9 +276,9 @@ export default function AdminOrders() {
                     aria-expanded={isManualOrderOpen}
                 >
                     <div>
-                        <p className="text-xl font-bold tracking-tight text-zinc-950">Создать заказ вручную</p>
+                        <p className="text-xl font-bold tracking-tight text-zinc-950">{a.manualCreate}</p>
                         {!isManualOrderOpen && (
-                            <p className="mt-1 text-sm text-zinc-500">Нажмите, чтобы открыть форму</p>
+                            <p className="mt-1 text-sm text-zinc-500">{a.openFormHint}</p>
                         )}
                     </div>
                     <span className={`flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 text-zinc-500 transition-transform duration-300 ${isManualOrderOpen ? 'rotate-180' : ''}`}>
@@ -288,13 +294,13 @@ export default function AdminOrders() {
 
                                 <div className="space-y-4 mb-4">
                                     <div className="flex justify-between items-center mb-2">
-                                        <label className={adminSectionLabelClassName}>Товары</label>
+                                        <label className={adminSectionLabelClassName}>{a.products}</label>
                                         <button
                                             type="button"
                                             onClick={() => updateManualOrderField('items', [...manualOrder.items, { productId: '', quantity: '1' }])}
                                             className="text-xs font-bold uppercase tracking-widest text-[#2E6B50] hover:text-[#1a5a48]"
                                         >
-                                            + Добавить товар
+                                            {a.addProduct}
                                         </button>
                                     </div>
                                     {manualOrder.items.map((item, index) => {
@@ -303,7 +309,7 @@ export default function AdminOrders() {
                                         return (
                                             <div key={index} className="grid gap-4 rounded-2xl border border-zinc-100 bg-[#F5F5F7] p-4 md:grid-cols-[1.4fr_1fr_1fr_auto]">
                                                 <div>
-                                                    <label className={adminSectionLabelClassName}>Товар</label>
+                                                    <label className={adminSectionLabelClassName}>{a.product}</label>
                                                     <select
                                                         required
                                                         value={item.productId}
@@ -314,14 +320,14 @@ export default function AdminOrders() {
                                                         }}
                                                         className={`${adminFieldClassName} border-zinc-200 bg-white`}
                                                     >
-                                                        <option value="">Выберите товар</option>
+                                                        <option value="">{a.selectProduct}</option>
                                                         {products.map(p => (
                                                             <option key={p.id} value={p.id}>{p.name}</option>
                                                         ))}
                                                     </select>
                                                 </div>
                                                 <div>
-                                                    <label className={adminSectionLabelClassName}>Количество</label>
+                                                    <label className={adminSectionLabelClassName}>{a.quantity}</label>
                                                     <input
                                                         type="text"
                                                         inputMode="numeric"
@@ -336,7 +342,7 @@ export default function AdminOrders() {
                                                     />
                                                 </div>
                                                 <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-3">
-                                                    <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Итого</p>
+                                                    <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">{a.total}</p>
                                                     <p className="mt-2 text-xl font-semibold text-zinc-950">
                                                         {formatCurrency(unitPrice * qty)} ₸
                                                     </p>
@@ -361,50 +367,50 @@ export default function AdminOrders() {
 
                                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                     <div>
-                                        <label className={adminSectionLabelClassName}>Имя клиента</label>
-                                        <input type="text" autoComplete="name" value={manualOrder.name} onChange={e => updateManualOrderField('name', sanitizeNameInput(e.target.value))} placeholder="Введите имя" className={adminFieldClassName} />
+                                        <label className={adminSectionLabelClassName}>{a.clientName}</label>
+                                        <input type="text" autoComplete="name" value={manualOrder.name} onChange={e => updateManualOrderField('name', sanitizeNameInput(e.target.value))} placeholder={a.namePlaceholder} className={adminFieldClassName} />
                                     </div>
                                     <div>
-                                        <label className={adminSectionLabelClassName}>Телефон</label>
+                                        <label className={adminSectionLabelClassName}>{a.phone}</label>
                                         <input required type="tel" autoComplete="tel" inputMode="numeric" value={formatPhoneDisplay(manualOrder.phone)} onChange={e => updateManualOrderField('phone', normalizePhoneInput(e.target.value))} placeholder="+7 (___) ___-__-__" className={adminFieldClassName} />
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label className={adminSectionLabelClassName}>Адрес доставки</label>
-                                    <input type="text" autoComplete="street-address" value={manualOrder.address} onChange={e => updateManualOrderField('address', e.target.value)} placeholder="Город, улица, дом" className={adminFieldClassName} />
+                                    <label className={adminSectionLabelClassName}>{a.address}</label>
+                                    <input type="text" autoComplete="street-address" value={manualOrder.address} onChange={e => updateManualOrderField('address', e.target.value)} placeholder={a.addressPlaceholder} className={adminFieldClassName} />
                                 </div>
 
                                 <div className="rounded-2xl border border-zinc-100 bg-[#DAF1DE]/20 px-4 py-3">
                                     <label htmlFor="admin-whatsapp" className="flex cursor-pointer items-center gap-3">
                                         <input id="admin-whatsapp" type="checkbox" checked={manualOrder.whatsapp} onChange={e => updateManualOrderField('whatsapp', e.target.checked)} className="h-4 w-4 cursor-pointer accent-black" />
-                                        <span className="text-sm font-medium text-zinc-800">Связаться через WhatsApp</span>
+                                        <span className="text-sm font-medium text-zinc-800">{a.whatsapp}</span>
                                     </label>
                                 </div>
 
                                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                     <div>
-                                        <label className={adminSectionLabelClassName}>Способ оплаты</label>
+                                        <label className={adminSectionLabelClassName}>{a.paymentMethod}</label>
                                         <select value={manualOrder.paymentMethod} onChange={e => updateManualOrderField('paymentMethod', e.target.value)} className={adminFieldClassName}>
-                                            <option value="CASH">Наличными при получении</option>
-                                            <option value="CARD">Перевод на карту</option>
+                                            <option value="CASH">{a.cash}</option>
+                                            <option value="CARD">{a.card}</option>
                                         </select>
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label className={adminSectionLabelClassName}>Комментарий</label>
-                                    <textarea rows="4" value={manualOrder.comment} onChange={e => updateManualOrderField('comment', e.target.value)} placeholder="Дополнительная информация, пожелания клиента или детали" className={`${adminFieldClassName} resize-none`} />
+                                    <label className={adminSectionLabelClassName}>{a.comment}</label>
+                                    <textarea rows="4" value={manualOrder.comment} onChange={e => updateManualOrderField('comment', e.target.value)} placeholder={a.commentPlaceholder} className={`${adminFieldClassName} resize-none`} />
                                 </div>
 
                                 <div>
-                                    <label className={adminSectionLabelClassName}>Варианты / Опции</label>
-                                    <textarea rows="3" value={manualOrder.selectedOptionsInput} onChange={e => updateManualOrderField('selectedOptionsInput', e.target.value)} placeholder='JSON или текст, например: {"size":"160x80","color":"oak"}' className={`${adminFieldClassName} resize-none`} />
+                                    <label className={adminSectionLabelClassName}>{a.options}</label>
+                                    <textarea rows="3" value={manualOrder.selectedOptionsInput} onChange={e => updateManualOrderField('selectedOptionsInput', e.target.value)} placeholder={a.optionsPlaceholder} className={`${adminFieldClassName} resize-none`} />
                                 </div>
 
                                 <div className="flex justify-end border-t border-zinc-100 pt-5">
                                     <button type="submit" disabled={creatingOrder} className="min-w-[220px] rounded-xl bg-black px-6 py-3 text-xs font-bold uppercase tracking-widest text-white transition-opacity hover:opacity-90 disabled:opacity-50">
-                                        {creatingOrder ? 'Создание...' : 'Создать заказ'}
+                                        {creatingOrder ? a.creating : a.createOrder}
                                     </button>
                                 </div>
                             </form>
@@ -413,12 +419,12 @@ export default function AdminOrders() {
                 </div>
             </div>
 
-            {/* СПИСОК ЗАКАЗОВ */}
+            {/* Orders list */}
             <div>
                 <div className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
                     <div>
-                        <h2 className="text-2xl font-bold tracking-tight">Заказы клиентов <span className="text-zinc-400 font-medium text-lg ml-2">{filteredOrders.length}</span></h2>
-                        <p className="mt-2 text-sm text-zinc-500">Быстрый поиск по клиенту и статусу, без перезагрузки списка.</p>
+                        <h2 className="text-2xl font-bold tracking-tight">{a.customerOrders} <span className="text-zinc-400 font-medium text-lg ml-2">{filteredOrders.length}</span></h2>
+                        <p className="mt-2 text-sm text-zinc-500">{a.listHint}</p>
                     </div>
 
                     <div className="grid gap-3 sm:grid-cols-[minmax(0,1.4fr)_minmax(260px,0.9fr)] lg:min-w-[560px]">
@@ -426,7 +432,7 @@ export default function AdminOrders() {
                             type="text"
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
-                            placeholder="Поиск по имени или телефону"
+                            placeholder={a.searchPlaceholder}
                             className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm font-medium text-zinc-900 outline-none transition-colors placeholder:text-zinc-400 focus:border-zinc-400"
                         />
                         <div className="relative">
@@ -435,27 +441,27 @@ export default function AdminOrders() {
                                 onClick={() => setIsFilterOpen((prev) => !prev)}
                                 className="flex w-full items-center justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-left text-sm font-medium text-zinc-900 transition-colors hover:border-zinc-300"
                             >
-                                <span>{statusFilter.length === 0 ? 'Статусы не выбраны' : `Статусы: ${statusFilter.join(', ')}`}</span>
-                                <span className="text-xs uppercase tracking-[0.18em] text-zinc-400">Фильтр</span>
+                                <span>{statusFilter.length === 0 ? a.noStatuses : a.statusesPrefix.replace('{{statuses}}', statusFilter.map(translateStatus).join(', '))}</span>
+                                <span className="text-xs uppercase tracking-[0.18em] text-zinc-400">{a.filter}</span>
                             </button>
 
                             {isFilterOpen && (
                                 <div className="absolute right-0 top-[calc(100%+8px)] z-20 w-full rounded-2xl border border-zinc-200 bg-white p-3 shadow-lg">
                                     <div className="mb-2 flex items-center justify-between">
-                                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">Статусы</p>
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">{a.statuses}</p>
                                         <button
                                             type="button"
                                             onClick={() => setStatusFilter(['NEW', 'IN_PROGRESS', 'DONE', 'CANCELLED'])}
                                             className="text-[10px] font-bold uppercase tracking-[0.18em] text-zinc-500 hover:text-zinc-900"
                                         >
-                                            Сбросить
+                                            {a.reset}
                                         </button>
                                     </div>
 
                                     <div className="space-y-2">
                                         {['NEW', 'IN_PROGRESS', 'DONE', 'CANCELLED'].map((value) => (
                                             <label key={value} className="flex cursor-pointer items-center justify-between rounded-xl px-3 py-2 hover:bg-zinc-50">
-                                                <span className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-700">{value}</span>
+                                                <span className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-700">{translateStatus(value)}</span>
                                                 <input
                                                     type="checkbox"
                                                     checked={statusFilter.includes(value)}
@@ -472,18 +478,18 @@ export default function AdminOrders() {
                 </div>
 
                 {loading ? (
-                    <div className="text-zinc-400 text-sm font-medium">Загрузка заказов...</div>
+                    <div className="text-zinc-400 text-sm font-medium">{a.loading}</div>
                 ) : filteredOrders.length === 0 ? (
-                    <p className="text-zinc-400 text-sm italic">Заказов пока нет.</p>
+                    <p className="text-zinc-400 text-sm italic">{a.empty}</p>
                 ) : (
                     <div className="flex flex-col gap-4">
                         {filteredOrders.map(o => {
                             const { customer, phone, badgeStyle } = getOrderInfo(o);
                             const phoneDigits = phone.replace(/\D/g, '');
-                            const paymentMethod = o.paymentMethod || 'CASH';
+                            const paymentMethod = getPaymentLabel(o.paymentMethod || 'CASH');
                             const createdAt = o.createdAt
-                                ? new Date(o.createdAt).toLocaleDateString('ru-RU', { day: '2-digit', month: 'short', year: 'numeric' })
-                                : 'Нет даты';
+                                ? new Date(o.createdAt).toLocaleDateString(lang === 'kz' ? 'kk-KZ' : 'ru-RU', { day: '2-digit', month: 'short', year: 'numeric' })
+                                : t('common.noDate');
                             const items = getOrderItems(o);
 
                             return (
@@ -499,7 +505,7 @@ export default function AdminOrders() {
                                             </div>
                                             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 flex-1 w-full text-sm min-w-0">
                                                 <div className="min-w-0">
-                                                    <p className="text-[10px] uppercase font-bold tracking-[0.22em] text-zinc-400 mb-1">Клиент</p>
+                                                    <p className="text-[10px] uppercase font-bold tracking-[0.22em] text-zinc-400 mb-1">{t('common.client')}</p>
                                                     <p className="font-semibold text-zinc-900 truncate">{customer}</p>
                                                     <a
                                                         href={phoneDigits ? `tel:+${phoneDigits}` : undefined}
@@ -510,26 +516,26 @@ export default function AdminOrders() {
                                                     </a>
                                                 </div>
                                                 <div className="min-w-0">
-                                                    <p className="text-[10px] uppercase font-bold tracking-[0.22em] text-zinc-400 mb-1">Товары ({getTotalQuantity(o)} шт.)</p>
+                                                    <p className="text-[10px] uppercase font-bold tracking-[0.22em] text-zinc-400 mb-1">{a.goodsWithCount.replace('{{count}}', getTotalQuantity(o))}</p>
                                                     <div className="space-y-1 mt-1">
                                                         {items.length === 0 ? (
-                                                            <p className="font-medium text-zinc-700 line-clamp-2 text-xs">Нет товаров</p>
+                                                            <p className="font-medium text-zinc-700 line-clamp-2 text-xs">{a.noProducts}</p>
                                                         ) : items.map((item, idx) => (
                                                             <p key={idx} className="font-medium text-zinc-700 line-clamp-2 text-[13px]">
                                                                 <span className="text-zinc-400 font-semibold">{item.quantity} x </span>
-                                                                {item.productName || `ID Товара: ${item.productId}`}
+                                                                {item.productName || a.productId.replace('{{id}}', item.productId)}
                                                             </p>
                                                         ))}
                                                     </div>
                                                 </div>
                                                 <div>
-                                                    <p className="text-[10px] uppercase font-bold tracking-[0.22em] text-zinc-400 mb-1">Оплата</p>
+                                                    <p className="text-[10px] uppercase font-bold tracking-[0.22em] text-zinc-400 mb-1">{a.payment}</p>
                                                     <p className="font-semibold text-zinc-900">{formatCurrency(getCalculatedTotal(o))} ₸</p>
                                                     <p className="text-zinc-500 text-sm mt-1">{createdAt}</p>
                                                 </div>
                                                 <div className="min-w-0">
-                                                    <p className="text-[10px] uppercase font-bold tracking-[0.22em] text-zinc-400 mb-1">Адрес</p>
-                                                    <p className="font-medium text-zinc-600 line-clamp-2">{o.address || 'Не указан'}</p>
+                                                    <p className="text-[10px] uppercase font-bold tracking-[0.22em] text-zinc-400 mb-1">{t('common.address')}</p>
+                                                    <p className="font-medium text-zinc-600 line-clamp-2">{o.address || t('common.notSpecified')}</p>
                                                     <p className="mt-1 text-xs font-medium uppercase tracking-[0.16em] text-zinc-400">{paymentMethod}</p>
                                                 </div>
                                             </div>
@@ -538,7 +544,7 @@ export default function AdminOrders() {
                                         <div className="flex flex-col items-stretch gap-3 xl:w-[240px]" onClick={e => e.stopPropagation()}>
                                             <div className="flex items-center justify-between gap-3">
                                                 <span className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${badgeStyle}`}>
-                                                    {o.status || 'NEW'}
+                                                    {translateStatus(o.status)}
                                                 </span>
                                                 <select
                                                     value={(o.status || 'new').toLowerCase()}
@@ -546,10 +552,10 @@ export default function AdminOrders() {
                                                     disabled={updatingStatusId === o.id}
                                                     className="text-xs font-bold text-zinc-600 outline-none cursor-pointer bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-2 uppercase tracking-wider hover:text-[#111] transition-colors"
                                                 >
-                                                    <option value="new">NEW</option>
-                                                    <option value="in_progress">PROCESS</option>
-                                                    <option value="done">DONE</option>
-                                                    <option value="cancelled">CANCELLED</option>
+                                                    <option value="new">{translateStatus('NEW')}</option>
+                                                    <option value="in_progress">{translateStatus('IN_PROGRESS')}</option>
+                                                    <option value="done">{translateStatus('DONE')}</option>
+                                                    <option value="cancelled">{translateStatus('CANCELLED')}</option>
                                                 </select>
                                             </div>
 
@@ -559,13 +565,13 @@ export default function AdminOrders() {
                                                     onClick={() => setSelectedOrder(o)}
                                                     className="px-3.5 py-2 rounded-xl bg-black text-white text-xs font-bold uppercase tracking-wider hover:opacity-90 transition-opacity"
                                                 >
-                                                    Открыть
+                                                    {a.open}
                                                 </button>
                                                 <a
                                                     href={phoneDigits ? `tel:+${phoneDigits}` : undefined}
                                                     className="px-3.5 py-2 rounded-xl border border-zinc-200 text-zinc-700 text-xs font-bold uppercase tracking-wider hover:border-zinc-300 hover:bg-zinc-50 transition-colors"
                                                 >
-                                                    Позвонить
+                                                    {a.call}
                                                 </a>
                                                 <a
                                                     href={phoneDigits ? `https://wa.me/${phoneDigits}` : undefined}
@@ -581,7 +587,7 @@ export default function AdminOrders() {
                                                     disabled={updatingStatusId === o.id || normalizeOrderStatus(o.status) === 'CANCELLED'}
                                                     className="px-3.5 py-2 rounded-xl border border-red-200 text-red-600 text-xs font-bold uppercase tracking-wider hover:bg-red-50 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
                                                 >
-                                                    Отменить
+                                                    {a.cancel}
                                                 </button>
                                             </div>
                                         </div>
@@ -593,7 +599,7 @@ export default function AdminOrders() {
                 )}
             </div>
 
-            {/* MODAL: Детали заказа */}
+            {/* Order details modal */}
             {selectedOrder && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
                     {/* Overlay */}
@@ -604,7 +610,7 @@ export default function AdminOrders() {
 
                     {/* Modal Content */}
                     <div className="relative z-10 flex max-h-[85vh] w-full max-w-[820px] flex-col overflow-hidden rounded-[28px] bg-white p-8 shadow-[0_30px_90px_rgba(15,23,42,0.22)] animate-in fade-in zoom-in duration-200">
-                        {/* Кнопка закрытия */}
+                        {/* Close button */}
                         <button
                             onClick={() => setSelectedOrder(null)}
                             className="absolute right-6 top-6 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 text-zinc-500 transition-colors hover:bg-zinc-200 hover:text-black"
@@ -612,23 +618,23 @@ export default function AdminOrders() {
                             <span className="text-sm font-bold leading-none">X</span>
                         </button>
 
-                        {/* Данные для модалки */}
+                        {/* Modal data */}
                         {(() => {
                             const { customer, phone, badgeStyle } = getOrderInfo(selectedOrder);
                             const items = getOrderItems(selectedOrder);
                             const createdAt = selectedOrder.createdAt
-                                ? new Date(selectedOrder.createdAt).toLocaleString('ru-RU', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-                                : 'Не указано';
+                                ? new Date(selectedOrder.createdAt).toLocaleString(lang === 'kz' ? 'kk-KZ' : 'ru-RU', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                                : t('common.notSpecified');
                             const updatedAt = selectedOrder.updatedAt
-                                ? new Date(selectedOrder.updatedAt).toLocaleString('ru-RU', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-                                : 'Не указано';
+                                ? new Date(selectedOrder.updatedAt).toLocaleString(lang === 'kz' ? 'kk-KZ' : 'ru-RU', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                                : t('common.notSpecified');
 
                             return (
                                 <div className="flex min-h-0 flex-1 flex-col">
                                     <div className="mb-6 flex items-start gap-3 border-b border-zinc-200 pb-5 pr-14">
                                         <div className="min-w-0">
                                             <div className="flex flex-wrap items-center gap-3">
-                                                <h3 className="text-[28px] font-bold tracking-tight text-zinc-950">Заказ #{selectedOrder.id}</h3>
+                                                <h3 className="text-[28px] font-bold tracking-tight text-zinc-950">{a.modalTitle.replace('{{id}}', selectedOrder.id)}</h3>
                                                 <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${badgeStyle}`}>
                                                     {selectedOrder.status || 'NEW'}
                                                 </span>
@@ -641,22 +647,22 @@ export default function AdminOrders() {
                                             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                                                 <div className="space-y-3 rounded-2xl bg-zinc-50 p-4">
                                                     <div>
-                                                        <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-400">Клиент</p>
+                                                        <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-400">{t('common.client')}</p>
                                                         <p className="text-base font-semibold text-zinc-950">{customer}</p>
                                                     </div>
                                                     <div>
-                                                        <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-400">Телефон</p>
+                                                        <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-400">{a.phone}</p>
                                                         <p className="text-base font-semibold text-zinc-950">{phone}</p>
                                                     </div>
                                                     <div>
-                                                        <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-400">Товары ({getTotalQuantity(selectedOrder)} шт.)</p>
+                                                        <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-400">{a.goodsWithCount.replace('{{count}}', getTotalQuantity(selectedOrder))}</p>
                                                         <div className="space-y-2 mt-2">
                                                             {items.length === 0 ? (
-                                                                <p className="text-sm text-zinc-600">Нет товаров</p>
+                                                                <p className="text-sm text-zinc-600">{a.noProducts}</p>
                                                             ) : items.map((item, idx) => (
                                                                 <div key={idx} className="flex justify-between items-start text-sm">
                                                                     <span className="font-semibold text-zinc-950 pr-2">
-                                                                        <span className="text-zinc-500">{item.quantity} x</span> {item.productName || `ID Товара: ${item.productId}`}
+                                                                        <span className="text-zinc-500">{item.quantity} x</span> {item.productName || a.productId.replace('{{id}}', item.productId)}
                                                                     </span>
                                                                     {item.price && (
                                                                         <span className="text-zinc-500 whitespace-nowrap">{formatCurrency(Number(item.price) * parseQuantity(item.quantity))} ₸</span>
@@ -666,46 +672,46 @@ export default function AdminOrders() {
                                                         </div>
                                                     </div>
                                                     <div>
-                                                        <p className="mb-1 mt-2 text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-400">Общая сумма</p>
+                                                        <p className="mb-1 mt-2 text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-400">{a.totalAmount}</p>
                                                         <p className="text-lg font-semibold text-zinc-950">{formatCurrency(getCalculatedTotal(selectedOrder))} ₸</p>
                                                     </div>
                                                     <div>
-                                                        <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-400">Адрес</p>
-                                                        <p className="text-base font-semibold text-zinc-950">{selectedOrder.address || 'Не указан'}</p>
+                                                        <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-400">{t('common.address')}</p>
+                                                        <p className="text-base font-semibold text-zinc-950">{selectedOrder.address || t('common.notSpecified')}</p>
                                                     </div>
                                                 </div>
 
                                                 <div className="space-y-3 rounded-2xl bg-zinc-50 p-4">
                                                     <div>
-                                                        <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-400">Дата создания</p>
+                                                        <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-400">{a.createdAt}</p>
                                                         <p className="text-base font-semibold text-zinc-950">{createdAt}</p>
                                                     </div>
                                                     <div>
-                                                        <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-400">Дата обновления</p>
+                                                        <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-400">{a.updatedAt}</p>
                                                         <p className="text-base font-semibold text-zinc-950">{updatedAt}</p>
                                                     </div>
                                                     <div>
-                                                        <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-400">Способ оплаты</p>
-                                                        <p className="text-base font-semibold text-zinc-950">{selectedOrder.paymentMethod || 'CASH'}</p>
+                                                        <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-400">{a.paymentMethod}</p>
+                                                        <p className="text-base font-semibold text-zinc-950">{getPaymentLabel(selectedOrder.paymentMethod || 'CASH')}</p>
                                                     </div>
                                                     <div>
-                                                        <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-400">Источник</p>
+                                                        <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-400">{a.source}</p>
                                                         <p className="text-base font-semibold text-zinc-950">{selectedOrder.source || 'WEB'}</p>
                                                     </div>
                                                     <div>
                                                         <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-400">WhatsApp</p>
-                                                        <p className="text-base font-semibold text-zinc-950">{selectedOrder.whatsapp ? 'Да' : 'Нет'}</p>
+                                                        <p className="text-base font-semibold text-zinc-950">{selectedOrder.whatsapp ? t('common.yes') : t('common.no')}</p>
                                                     </div>
                                                     <div>
-                                                        <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-400">Статус</p>
-                                                        <p className="text-base font-semibold text-zinc-950">{selectedOrder.status || 'NEW'}</p>
+                                                        <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-400">{t('common.status')}</p>
+                                                        <p className="text-base font-semibold text-zinc-950">{translateStatus(selectedOrder.status)}</p>
                                                     </div>
                                                 </div>
                                             </div>
 
                                             {selectedOrder.comment && (
                                                 <div className="rounded-2xl bg-zinc-50 p-4">
-                                                    <h4 className="mb-2 text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-400">Комментарий клиента</h4>
+                                                    <h4 className="mb-2 text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-400">{a.customerComment}</h4>
                                                     <p className="whitespace-pre-wrap text-sm font-medium leading-relaxed text-zinc-700">
                                                         {selectedOrder.comment}
                                                     </p>
@@ -713,25 +719,25 @@ export default function AdminOrders() {
                                             )}
 
                                             <div className="rounded-2xl bg-zinc-50 p-4">
-                                                <h4 className="mb-2 text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-400">Комментарий администратора</h4>
+                                                <h4 className="mb-2 text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-400">{a.adminComment}</h4>
                                                 <textarea
                                                     rows="4"
                                                     value={adminCommentDraft}
                                                     onChange={(e) => setAdminCommentDraft(e.target.value)}
                                                     className="w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm font-medium text-zinc-800 outline-none transition-colors focus:border-zinc-300"
-                                                    placeholder="Внутренний комментарий для команды"
+                                                    placeholder={a.adminCommentPlaceholder}
                                                 />
                                             </div>
 
                                             {selectedOrder.images && selectedOrder.images.length > 0 && (
                                                 <div className="rounded-2xl bg-zinc-50 p-4">
-                                                    <h4 className="mb-3 text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-400">Изображения референсов</h4>
+                                                    <h4 className="mb-3 text-[10px] font-bold uppercase tracking-[0.22em] text-zinc-400">{a.referenceImages}</h4>
                                                     <div className="grid grid-cols-4 gap-3 sm:grid-cols-5">
                                                         {selectedOrder.images.map((img, idx) => {
                                                             const imgUrl = img.startsWith('http') ? img : `http://localhost:3002${img}`;
                                                             return (
                                                                 <a key={idx} href={imgUrl} target="_blank" rel="noreferrer" className="block aspect-square overflow-hidden rounded-xl border border-zinc-200 shadow-sm transition-all hover:border-zinc-400 hover:shadow-md">
-                                                                    <img src={imgUrl} alt="Загружено пользователем" className="h-full w-full object-cover" />
+                                                                    <img src={imgUrl} alt={a.uploadedByUser} className="h-full w-full object-cover" />
                                                                 </a>
                                                             );
                                                         })}
@@ -746,7 +752,7 @@ export default function AdminOrders() {
                                             onClick={() => setSelectedOrder(null)}
                                             className="rounded-xl border border-zinc-200 px-5 py-3 text-xs font-bold uppercase tracking-widest text-zinc-600 transition-colors hover:bg-zinc-50 hover:text-zinc-950"
                                         >
-                                            Закрыть
+                                            {t('common.close')}
                                         </button>
 
                                         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
@@ -756,7 +762,7 @@ export default function AdminOrders() {
                                                 disabled={savingAdminComment || adminCommentDraft === (selectedOrder.adminComment || '')}
                                                 className="rounded-xl bg-zinc-200 px-5 py-3 text-xs font-bold uppercase tracking-widest text-zinc-800 transition-colors hover:bg-zinc-300 disabled:cursor-not-allowed disabled:opacity-50"
                                             >
-                                                {savingAdminComment ? 'Сохранение...' : 'Сохранить комментарий'}
+                                                {savingAdminComment ? t('common.saving') : a.saveComment}
                                             </button>
                                             <button
                                                 type="button"
@@ -764,7 +770,7 @@ export default function AdminOrders() {
                                                 disabled={updatingStatusId === selectedOrder.id || normalizeOrderStatus(selectedOrder.status) === 'DONE'}
                                                 className="rounded-xl bg-emerald-600 px-5 py-3 text-xs font-bold uppercase tracking-widest text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
                                             >
-                                                Готово
+                                                {a.done}
                                             </button>
                                             <button
                                                 type="button"
@@ -772,7 +778,7 @@ export default function AdminOrders() {
                                                 disabled={updatingStatusId === selectedOrder.id || normalizeOrderStatus(selectedOrder.status) === 'CANCELLED'}
                                                 className="rounded-xl border border-red-200 px-5 py-3 text-xs font-bold uppercase tracking-widest text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                                             >
-                                                Отменить
+                                                {a.cancel}
                                             </button>
                                         </div>
                                     </div>

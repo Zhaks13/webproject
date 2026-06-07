@@ -6,6 +6,7 @@ import {
     Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
 import * as XLSX from 'xlsx';
+import { useLang } from '../context/LanguageContext';
 
 // ─── DATE UTILS ───────────────────────────────────────────────────────────────
 
@@ -18,8 +19,12 @@ function endOfDay(d) {
 function daysAgo(n) {
     const d = new Date(); d.setDate(d.getDate() - n); return startOfDay(d);
 }
-function formatDate(d) {
-    return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
+function getLocale(lang) {
+    return lang === 'kz' ? 'kk-KZ' : 'ru-RU';
+}
+
+function formatDate(d, lang = 'ru') {
+    return d.toLocaleDateString(getLocale(lang), { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 function isSameDay(a, b) {
     return startOfDay(a).getTime() === startOfDay(b).getTime();
@@ -47,10 +52,6 @@ function getCalendarDays(year, month) {
     }
     return days;
 }
-
-const MONTHS = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
-    'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
-const DAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
 // ─── ANALYTICS HELPERS ────────────────────────────────────────────────────────
 
@@ -122,41 +123,42 @@ function groupOrdersForChart(orders, dr) {
     }
 }
 
-function buildOrderItemsStr(order) {
+function buildOrderItemsStr(order, t) {
     if (order.items?.length > 0) {
         return order.items.map(i => {
-            const name = i.name || i.productName || `Товар #${i.productId}`;
+            const name = i.name || i.productName || t('admin.dashboard.productFallback', { id: i.productId });
             return `${name} ×${i.quantity || 1}`;
         }).join(', ');
     }
     return order.displayName || '—';
 }
 
-function exportToExcel(orders, dateRange) {
+function exportToExcel(orders, dateRange, t, lang) {
     const wb = XLSX.utils.book_new();
-    const fmtD = d => d.toLocaleDateString('ru-RU');
-    const fmtP = d => d.toLocaleDateString('ru-RU').replace(/\./g, '-');
+    const locale = getLocale(lang);
+    const fmtD = d => d.toLocaleDateString(locale);
+    const fmtP = d => d.toISOString().slice(0, 10);
     const now = new Date();
-    const periodStr = `${fmtD(dateRange.start)} — ${fmtD(dateRange.end)}`;
+    const periodStr = `${fmtD(dateRange.start)} - ${fmtD(dateRange.end)}`;
 
-    // ── Sheet 1: Заказы ──────────────────────────────────────────────────────
+    // Sheet 1.
     const headerBlock = [
-        ['ОТЧЕТ ПО ЗАКАЗАМ'],
-        [`Период: ${periodStr}`],
-        [`Дата формирования: ${fmtD(now)}`],
+        [t('admin.dashboard.reportTitle')],
+        [t('admin.dashboard.reportPeriod', { period: periodStr })],
+        [t('admin.dashboard.reportDate', { date: fmtD(now) })],
         [],
     ];
-    const tableHeaders = ['ID', 'Дата', 'Клиент', 'Телефон', 'Адрес', 'Товары', 'Кол-во товаров', 'Сумма (₸)', 'Статус'];
+    const tableHeaders = t('admin.dashboard.tableHeaders');
     const tableRows = orders.map(o => {
         const items = o.items || [];
         const totalQty = items.length > 0 ? items.reduce((s, i) => s + (i.quantity || 1), 0) : 1;
         return [
             o.id ?? '',
-            o.createdAt ? new Date(o.createdAt).toLocaleString('ru-RU') : '',
+            o.createdAt ? new Date(o.createdAt).toLocaleString(locale) : '',
             o.name || '',
             o.phone || '',
             o.address || '',
-            buildOrderItemsStr(o),
+            buildOrderItemsStr(o, t),
             totalQty,
             o.totalPrice ?? 0,
             o.status || '',
@@ -167,9 +169,9 @@ function exportToExcel(orders, dateRange) {
         { wch: 6 }, { wch: 22 }, { wch: 20 }, { wch: 16 },
         { wch: 25 }, { wch: 38 }, { wch: 16 }, { wch: 14 }, { wch: 14 },
     ];
-    XLSX.utils.book_append_sheet(wb, ws1, 'Заказы');
+    XLSX.utils.book_append_sheet(wb, ws1, t('admin.dashboard.sheetOrders'));
 
-    // ── Sheet 2: Сводка ───────────────────────────────────────────────────────
+    // Sheet 2.
     const revenue = orders.reduce((s, o) => s + (o.totalPrice || 0), 0);
     const avg = orders.length > 0 ? Math.round(revenue / orders.length) : 0;
     const newCount = orders.filter(o => (o.status || '').toUpperCase() === 'NEW').length;
@@ -177,53 +179,53 @@ function exportToExcel(orders, dateRange) {
     const itemCount = {};
     orders.forEach(o => {
         (o.items || []).forEach(item => {
-            const nm = item.name || item.productName || `Товар #${item.productId}`;
+            const nm = item.name || item.productName || t('admin.dashboard.productFallback', { id: item.productId });
             itemCount[nm] = (itemCount[nm] || 0) + (item.quantity || 1);
         });
     });
     const popular = Object.entries(itemCount).sort((a, b) => b[1] - a[1])[0];
-    const popularStr = popular ? `${popular[0]} (${popular[1]} шт.)` : '—';
+    const popularStr = popular ? `${popular[0]} (${popular[1]} ${t('admin.dashboard.pieces')})` : '—';
 
     const ws2 = XLSX.utils.aoa_to_sheet([
-        ['СВОДКА'],
-        [`Период: ${periodStr}`],
+        [t('admin.dashboard.summaryTitle')],
+        [t('admin.dashboard.reportPeriod', { period: periodStr })],
         [],
-        ['Показатель', 'Значение'],
-        ['Общее количество заказов', orders.length],
-        ['Общая выручка (₸)', revenue],
-        ['Средний чек (₸)', avg],
-        ['Самый популярный товар', popularStr],
-        ['Кол-во новых заказов', newCount],
+        [t('admin.dashboard.summaryMetric'), t('admin.dashboard.summaryValue')],
+        [t('admin.dashboard.summaryOrders'), orders.length],
+        [t('admin.dashboard.summaryRevenue'), revenue],
+        [t('admin.dashboard.summaryAvg'), avg],
+        [t('admin.dashboard.summaryPopular'), popularStr],
+        [t('admin.dashboard.summaryNewOrders'), newCount],
     ]);
     ws2['!cols'] = [{ wch: 32 }, { wch: 36 }];
-    XLSX.utils.book_append_sheet(wb, ws2, 'Сводка');
+    XLSX.utils.book_append_sheet(wb, ws2, t('admin.dashboard.sheetSummary'));
 
-    // ── Sheet 3: По дням ──────────────────────────────────────────────────────
+    // Sheet 3.
     const dayMap = {};
     orders.forEach(o => {
         if (!o.createdAt) return;
-        const day = new Date(o.createdAt).toLocaleDateString('ru-RU');
+        const day = new Date(o.createdAt).toLocaleDateString(locale);
         if (!dayMap[day]) dayMap[day] = { cnt: 0, rev: 0 };
         dayMap[day].cnt++;
         dayMap[day].rev += o.totalPrice || 0;
     });
     const ws3 = XLSX.utils.aoa_to_sheet([
-        ['ПО ДНЯМ'],
-        [`Период: ${periodStr}`],
+        [t('admin.dashboard.byDaysTitle')],
+        [t('admin.dashboard.reportPeriod', { period: periodStr })],
         [],
-        ['Дата', 'Кол-во заказов', 'Выручка (₸)'],
+        [t('admin.dashboard.date'), t('admin.dashboard.ordersCount'), t('admin.dashboard.summaryRevenue')],
         ...Object.entries(dayMap).map(([day, { cnt, rev }]) => [day, cnt, rev]),
     ]);
     ws3['!cols'] = [{ wch: 16 }, { wch: 18 }, { wch: 16 }];
-    XLSX.utils.book_append_sheet(wb, ws3, 'По дням');
+    XLSX.utils.book_append_sheet(wb, ws3, t('admin.dashboard.sheetByDays'));
 
     // ── Filename ──────────────────────────────────────────────────────────────
-    XLSX.writeFile(wb, `Отчет_заказов_${fmtP(dateRange.start)}_${fmtP(dateRange.end)}.xlsx`);
+    XLSX.writeFile(wb, `${t('admin.dashboard.fileName')}_${fmtP(dateRange.start)}_${fmtP(dateRange.end)}.xlsx`);
 }
 
 // ─── DATE RANGE PICKER ────────────────────────────────────────────────────────
 
-function DateRangePicker({ dateRange, onChange }) {
+function DateRangePicker({ dateRange, onChange, t, lang }) {
     const [open, setOpen] = useState(false);
     const [picking, setPicking] = useState(null); // { start: Date } | null
     const [hovered, setHovered] = useState(null);
@@ -242,11 +244,11 @@ function DateRangePicker({ dateRange, onChange }) {
     const todayReal = new Date();
 
     const presets = [
-        { label: 'Сегодня', fn: () => applyRange(startOfDay(new Date()), endOfDay(new Date())) },
-        { label: '7 дней', fn: () => applyRange(daysAgo(6), endOfDay(new Date())) },
-        { label: '30 дней', fn: () => applyRange(daysAgo(29), endOfDay(new Date())) },
+        { label: t('admin.dashboard.today'), fn: () => applyRange(startOfDay(new Date()), endOfDay(new Date())) },
+        { label: t('admin.dashboard.sevenDays'), fn: () => applyRange(daysAgo(6), endOfDay(new Date())) },
+        { label: t('admin.dashboard.thirtyDays'), fn: () => applyRange(daysAgo(29), endOfDay(new Date())) },
         {
-            label: 'Этот месяц', fn: () => {
+            label: t('admin.dashboard.thisMonth'), fn: () => {
                 const n = new Date();
                 applyRange(startOfDay(new Date(n.getFullYear(), n.getMonth(), 1)), endOfDay(n));
             }
@@ -273,7 +275,13 @@ function DateRangePicker({ dateRange, onChange }) {
         }
     }
 
+    const locale = getLocale(lang);
     const calDays = getCalendarDays(vy, vm);
+    const monthName = new Intl.DateTimeFormat(locale, { month: 'long' }).format(new Date(vy, vm, 1));
+    const dayNames = Array.from({ length: 7 }, (_, index) => {
+        const date = new Date(2023, 0, 2 + index);
+        return new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(date);
+    });
 
     return (
         <div ref={ref} className="relative">
@@ -286,7 +294,7 @@ function DateRangePicker({ dateRange, onChange }) {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
                         d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
-                <span>Период: {formatDate(dateRange.start)} — {formatDate(dateRange.end)}</span>
+                <span>{t('admin.dashboard.period')}: {formatDate(dateRange.start, lang)} - {formatDate(dateRange.end, lang)}</span>
                 <svg className={`w-3.5 h-3.5 text-zinc-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
@@ -315,7 +323,7 @@ function DateRangePicker({ dateRange, onChange }) {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" />
                             </svg>
                         </button>
-                        <span className="text-sm font-bold text-zinc-800">{MONTHS[vm]} {vy}</span>
+                        <span className="text-sm font-bold text-zinc-800">{monthName} {vy}</span>
                         <button onClick={nextM}
                             className="p-1.5 rounded-lg hover:bg-zinc-100 text-zinc-500 transition-colors">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -326,7 +334,7 @@ function DateRangePicker({ dateRange, onChange }) {
 
                     {/* Day headers */}
                     <div className="grid grid-cols-7 mb-1">
-                        {DAYS.map(d => (
+                        {dayNames.map(d => (
                             <div key={d} className="text-center text-[10px] font-bold text-zinc-400 py-1">{d}</div>
                         ))}
                     </div>
@@ -382,7 +390,7 @@ function DateRangePicker({ dateRange, onChange }) {
 
                     {picking && (
                         <p className="text-center text-[11px] text-zinc-400 mt-3 font-semibold">
-                            Кликните на конечную дату
+                            {t('admin.dashboard.clickEndDate')}
                         </p>
                     )}
                 </div>
@@ -398,6 +406,8 @@ function defaultRange() {
 }
 
 export default function AdminDashboard() {
+    const { t, lang } = useLang();
+    const d = t.admin.dashboard;
     const [orders, setOrders] = useState([]);
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -408,8 +418,8 @@ export default function AdminDashboard() {
         const loadData = async () => {
             try {
                 const [oRes, pRes] = await Promise.all([api.get('/orders'), api.get('/products')]);
-                setOrders(oRes.data);
-                setProducts(pRes.data);
+                setOrders(Array.isArray(oRes.data) ? oRes.data : []);
+                setProducts(Array.isArray(pRes.data) ? pRes.data : []);
             } catch (e) {
                 console.error(e);
             } finally {
@@ -421,7 +431,7 @@ export default function AdminDashboard() {
 
     const saveNotes = () => {
         localStorage.setItem('adminNotes', notes);
-        alert('Заметки сохранены');
+        alert(d.notesSaved);
     };
 
     const filteredOrders = useMemo(() => filterOrdersByDateRange(orders, dateRange), [orders, dateRange]);
@@ -439,9 +449,9 @@ export default function AdminDashboard() {
     if (loading) {
         return (
             <div className="max-w-[1200px] mx-auto px-6 pb-24 bg-[#f5f5f5] min-h-screen pt-8 font-sans text-zinc-900">
-                <h1 className="text-4xl font-bold tracking-tighter mb-8">Панель Управления</h1>
+                <h1 className="text-4xl font-bold tracking-tighter mb-8">{d.title}</h1>
                 <AdminTabs />
-                <div className="text-zinc-500 font-medium">Загрузка данных...</div>
+                <div className="text-zinc-500 font-medium">{d.loading}</div>
             </div>
         );
     }
@@ -451,11 +461,11 @@ export default function AdminDashboard() {
 
             {/* ─── HEADER ──────────────────────────────────────────────────── */}
             <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
-                <h1 className="text-4xl font-bold tracking-tighter">Панель Управления</h1>
+                <h1 className="text-4xl font-bold tracking-tighter">{d.title}</h1>
                 <div className="flex items-center gap-3">
-                    <DateRangePicker dateRange={dateRange} onChange={setDateRange} />
+                    <DateRangePicker dateRange={dateRange} onChange={setDateRange} t={t} lang={lang} />
                     <button
-                        onClick={() => exportToExcel(filteredOrders, dateRange)}
+                        onClick={() => exportToExcel(filteredOrders, dateRange, t, lang)}
                         disabled={filteredOrders.length === 0}
                         className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-zinc-900 text-white text-xs font-bold uppercase tracking-widest hover:bg-black transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                     >
@@ -463,7 +473,7 @@ export default function AdminDashboard() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
                                 d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                         </svg>
-                        Скачать отчет
+                        {d.downloadReport}
                     </button>
                 </div>
             </div>
@@ -474,37 +484,37 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-5">
                 <div className="bg-white rounded-2xl p-6 shadow-sm border border-zinc-100/50 flex flex-col justify-center items-center text-center">
                     <p className="text-4xl font-bold text-[#111] mb-2">{products.length}</p>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Всех товаров</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">{d.allProducts}</p>
                 </div>
                 <div className="bg-white rounded-2xl p-6 shadow-sm border border-zinc-100/50 flex flex-col justify-center items-center text-center">
                     <p className="text-4xl font-bold text-[#111] mb-2">{filteredOrders.length}</p>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Заказов за период</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">{d.ordersForPeriod}</p>
                 </div>
                 <div className="bg-zinc-900 rounded-2xl p-6 shadow-md flex flex-col justify-center items-center text-center">
                     <p className="text-4xl font-bold text-white mb-2">{newOrdersCount}</p>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Новых заказов</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">{d.newOrders}</p>
                 </div>
                 <div className="bg-white rounded-2xl p-6 shadow-sm border border-zinc-100/50 flex flex-col justify-center items-center text-center">
                     <p className="text-xl font-bold text-emerald-600 mb-1 leading-tight break-all">{formatPrice(totalRevenue)}</p>
                     {revenuePct !== null ? (
                         <p className={`text-[11px] font-bold mb-2 ${revenuePct >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                            {revenuePct >= 0 ? '+' : ''}{revenuePct.toFixed(1)}% за период
+                            {revenuePct >= 0 ? '+' : ''}{revenuePct.toFixed(1)}% {d.forPeriod}
                         </p>
                     ) : (
-                        <p className="text-[11px] text-zinc-300 mb-2">нет данных прошлого периода</p>
+                        <p className="text-[11px] text-zinc-300 mb-2">{d.noPreviousData}</p>
                     )}
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Общая выручка</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">{d.revenue}</p>
                 </div>
             </div>
 
             {/* Avg check wide bar */}
             <div className="bg-white rounded-2xl px-8 py-5 shadow-sm border border-zinc-100/50 flex items-center justify-between mb-10">
                 <div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1">Средний чек</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1">{d.avgCheck}</p>
                     <p className="text-3xl font-bold text-[#111]">{formatPrice(avgCheck)}</p>
                 </div>
                 <div className="text-right">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1">Всего новых</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1">{d.totalNew}</p>
                     <p className="text-3xl font-bold text-[#111]">{allNewOrders}</p>
                 </div>
             </div>
@@ -512,9 +522,9 @@ export default function AdminDashboard() {
             {/* ─── CHART ───────────────────────────────────────────────────── */}
             <div className="bg-white rounded-2xl p-8 shadow-sm border border-zinc-100/50 mb-10">
                 <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-lg font-bold tracking-tight text-zinc-800">Динамика заказов</h2>
+                    <h2 className="text-lg font-bold tracking-tight text-zinc-800">{d.chartTitle}</h2>
                     <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">
-                        {getRangeDays(dateRange) > 30 ? 'по месяцам' : 'по дням'}
+                        {getRangeDays(dateRange) > 30 ? d.byMonths : d.byDays}
                     </span>
                 </div>
                 <ResponsiveContainer width="100%" height={240}>
@@ -528,11 +538,11 @@ export default function AdminDashboard() {
                             contentStyle={{ background: '#18181b', border: 'none', borderRadius: 10, color: '#fff', fontSize: 12, fontWeight: 600 }}
                             labelStyle={{ color: '#a1a1aa', marginBottom: 4 }}
                             formatter={(val, name) => name === 'revenue'
-                                ? [val.toLocaleString('ru-RU') + ' ₸', 'Выручка']
-                                : [val, 'Заказов']}
+                                ? [val.toLocaleString(getLocale(lang)) + ' ₸', d.revenue]
+                                : [val, d.ordersForPeriod]}
                         />
                         <Legend iconType="circle" iconSize={8}
-                            formatter={n => n === 'revenue' ? 'Выручка' : 'Заказов'}
+                            formatter={n => n === 'revenue' ? d.revenue : d.ordersForPeriod}
                             wrapperStyle={{ fontSize: 11, fontWeight: 600, paddingTop: 8 }} />
                         <Line yAxisId="orders" type="monotone" dataKey="orders" stroke="#18181b" strokeWidth={2.5}
                             dot={{ fill: '#18181b', r: 4, strokeWidth: 0 }} activeDot={{ r: 6, fill: '#18181b' }} />
@@ -545,24 +555,24 @@ export default function AdminDashboard() {
             {/* ─── NOTES + RECENT ORDERS ───────────────────────────────────── */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
                 <div className="bg-white rounded-2xl p-8 shadow-sm flex flex-col h-full border border-zinc-100/50">
-                    <h2 className="text-2xl font-bold tracking-tight mb-6">Заметки</h2>
+                    <h2 className="text-2xl font-bold tracking-tight mb-6">{d.notes}</h2>
                     <textarea
                         className="w-full flex-grow min-h-[200px] bg-[#f5f5f5] rounded-xl p-5 text-sm font-medium outline-none resize-none mb-6 border border-transparent focus:border-zinc-300 transition-colors"
                         value={notes}
                         onChange={e => setNotes(e.target.value)}
-                        placeholder="Запишите идеи, номера или дела на сегодня..."
+                        placeholder={d.notesPlaceholder}
                     />
                     <button onClick={saveNotes}
                         className="w-full py-4 rounded-xl text-xs font-bold uppercase tracking-widest bg-zinc-900 text-white hover:bg-black transition-colors">
-                        Сохранить заметки
+                        {d.saveNotes}
                     </button>
                 </div>
 
                 <div className="bg-white rounded-2xl p-8 shadow-sm border border-zinc-100/50 h-full flex flex-col">
-                    <h2 className="text-2xl font-bold tracking-tight mb-6">Последние заказы</h2>
+                    <h2 className="text-2xl font-bold tracking-tight mb-6">{d.recentOrders}</h2>
                     <div className="flex flex-col gap-4 flex-grow">
                         {topOrders.length === 0 ? (
-                            <p className="text-zinc-400 text-sm italic py-4">Пока нет заказов.</p>
+                            <p className="text-zinc-400 text-sm italic py-4">{d.noOrders}</p>
                         ) : topOrders.map(o => {
                             const st = (o.status || 'NEW').toUpperCase();
                             let stColor = 'text-zinc-500 bg-zinc-100';
@@ -575,12 +585,12 @@ export default function AdminDashboard() {
                                             #{o.id}
                                         </div>
                                         <div>
-                                            <p className="font-bold text-sm text-[#111]">{o.name || o.customerName || 'Ручной заказ'}</p>
+                                            <p className="font-bold text-sm text-[#111]">{o.name || o.customerName || t('common.manualOrder')}</p>
                                             <p className="text-xs font-medium text-zinc-500">{o.phone}</p>
                                         </div>
                                     </div>
                                     <div className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${stColor}`}>
-                                        {st}
+                                        {t(`statuses.${st}`) || st}
                                     </div>
                                 </div>
                             );

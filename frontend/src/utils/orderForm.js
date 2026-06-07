@@ -12,7 +12,7 @@ export function buildInitialOrderFormState(user, selectedOptions = {}) {
 
 export function sanitizeNameInput(value) {
     return value
-        .replace(/[^A-Za-zА-Яа-яЁё\s]/g, '')
+        .replace(/[^\p{L}\s]/gu, '')
         .replace(/\s{2,}/g, ' ')
         .replace(/^\s+/, '');
 }
@@ -95,27 +95,27 @@ export function formatPrice(value) {
     return `${Math.round(value || 0).toLocaleString('ru-RU')} ₽`;
 }
 
-export function validateOrderForm(values) {
+export function validateOrderForm(values, messages = {}) {
     const errors = {};
     const normalizedName = values.name.trim();
     const normalizedAddress = values.address.trim();
 
     if (normalizedName.length < 2) {
-        errors.name = 'Введите минимум 2 символа.';
-    } else if (!/^[A-Za-zА-Яа-яЁё\s]+$/.test(normalizedName)) {
-        errors.name = 'Допустимы только буквы и пробелы.';
+        errors.name = messages.name || '';
+    } else if (!/^[\p{L}\s]+$/u.test(normalizedName)) {
+        errors.name = messages.nameLetters || '';
     }
 
     if (!/^\+7\d{10}$/.test(values.phone)) {
-        errors.phone = 'Введите номер в формате +7XXXXXXXXXX.';
+        errors.phone = messages.phone || '';
     }
 
     if (normalizedAddress.length < 5) {
-        errors.address = 'Укажите адрес не короче 5 символов.';
+        errors.address = messages.address || '';
     }
 
     if (!values.paymentMethod) {
-        errors.paymentMethod = 'Выберите способ оплаты.';
+        errors.paymentMethod = messages.paymentMethod || '';
     }
 
     return errors;

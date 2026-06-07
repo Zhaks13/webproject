@@ -141,7 +141,7 @@ export default function MiniCart({ isOpen, onClose }) {
                                     onClick={onClose}
                                     className="block w-full py-3.5 bg-[#111] text-white rounded-xl text-xs font-bold uppercase tracking-widest text-center hover:opacity-90 transition-opacity shadow-lg shadow-black/10"
                                 >
-                                    {c.goToCart || 'Перейти в корзину'}
+                                    {c.goToCart}
                                 </Link>
                             </div>
                         )}

@@ -16,7 +16,7 @@ export default function ProductInfo({ product, onAddToCart, added, mobile }) {
 
     return (
         <div className={`w-full flex flex-col justify-start ${isLg ? 'pt-32 px-16 lg:min-h-[250vh]' : 'px-6'}`}>
-            {/* Навигация */}
+            {/* Navigation */}
             <Link
                 to="/catalog"
                 className="text-xs uppercase tracking-widest text-zinc-400 font-bold hover:text-[#111] transition-colors mb-12 inline-block"
@@ -24,7 +24,7 @@ export default function ProductInfo({ product, onAddToCart, added, mobile }) {
                 {p.backToCatalog}
             </Link>
 
-            {/* Заголовок */}
+            {/* Title */}
             <motion.h1
                 {...fadeUp(0)}
                 className="text-5xl lg:text-7xl font-semibold tracking-tight leading-[1.05] mb-6"
@@ -32,7 +32,7 @@ export default function ProductInfo({ product, onAddToCart, added, mobile }) {
                 {product.name}
             </motion.h1>
 
-            {/* Цена */}
+            {/* Price */}
             <motion.p
                 {...fadeUp(0.1)}
                 className="text-2xl font-medium text-zinc-500 mb-16"
@@ -40,7 +40,7 @@ export default function ProductInfo({ product, onAddToCart, added, mobile }) {
                 {product.price} ₸
             </motion.p>
 
-            {/* Описание */}
+            {/* Description */}
             <motion.div {...fadeUp(0.2)} className="mb-16">
                 <h3 className="text-xs uppercase tracking-widest font-bold text-[#111] mb-4">{p.philosophy}</h3>
                 <p className="text-base text-zinc-500 leading-relaxed">
@@ -51,7 +51,7 @@ export default function ProductInfo({ product, onAddToCart, added, mobile }) {
                 </p>
             </motion.div>
 
-            {/* Характеристики */}
+            {/* Specs */}
             <motion.div {...fadeUp(0.3)} className="mb-16">
                 {p.specs.map(([title, desc]) => (
                     <div key={title} className="border-t border-zinc-200 py-5">
@@ -62,7 +62,7 @@ export default function ProductInfo({ product, onAddToCart, added, mobile }) {
                 <div className="border-t border-zinc-200" />
             </motion.div>
 
-            {/* Кнопка */}
+            {/* Button */}
             <div className={`${isLg ? 'sticky bottom-12' : 'mb-16'}`}>
                 <motion.button
                     {...fadeUp(0.4)}
@@ -74,7 +74,7 @@ export default function ProductInfo({ product, onAddToCart, added, mobile }) {
                             : 'bg-[#111] text-white hover:opacity-90'
                         }`}
                 >
-                    {added ? (p.addedToCart || '✓ Добавлено') : (p.addToCart || 'Добавить в корзину')}
+                    {added ? p.addedToCart : p.addToCart}
                 </motion.button>
             </div>
         </div>

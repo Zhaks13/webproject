@@ -66,12 +66,12 @@ export default function Navbar() {
             >
                 <div className="w-full max-w-[1400px] mx-auto px-6 lg:px-12 xl:px-20 h-24 flex items-center justify-between">
 
-                    {/* Логотип */}
+                    {/* Logo */}
                     <Link to="/" className="text-2xl font-bold tracking-tighter text-[#111] hover:opacity-70 transition-opacity">
                         Stolyarniy Dvor
                     </Link>
 
-                    {/* Центр - Ссылки (Десктоп) */}
+                    {/* Desktop links */}
                     <div className="hidden md:flex items-center space-x-10">
                         {links.map(l => (
                             <Link key={l.path} to={l.path} className="relative group p-2">
@@ -89,7 +89,7 @@ export default function Navbar() {
                         )}
                     </div>
 
-                    {/* Правая часть - Cart + Auth + Language Switcher */}
+                    {/* Cart, auth and language controls */}
                     <div className="hidden md:flex items-center space-x-4">
                         {/* Cart button → opens mini-cart */}
                         <button

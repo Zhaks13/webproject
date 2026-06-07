@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api';
+import { useLang } from '../context/LanguageContext';
 import {
     buildInitialOrderFormState,
     formatPhoneDisplay,
@@ -29,6 +30,8 @@ function getUserFromStorage() {
 }
 
 export default function OrderModal({ isOpen, onClose, product, selectedOptions = {} }) {
+    const { t } = useLang();
+    const o = t.orderModal;
     const user = useMemo(() => getUserFromStorage(), [isOpen]);
     const initialState = useMemo(
         () => buildInitialOrderFormState(user, selectedOptions),
@@ -59,7 +62,7 @@ export default function OrderModal({ isOpen, onClose, product, selectedOptions =
         setSubmitError('');
         setSuccessMessage('');
         setItems([{ productId: product?.id || '', quantity: 1 }]);
-        api.get('/products').then(res => setProducts(res.data)).catch(console.error);
+        api.get('/products').then(res => setProducts(Array.isArray(res.data) ? res.data : [])).catch(console.error);
 
         const focusTimer = window.setTimeout(() => {
             firstInputRef.current?.focus();
@@ -88,7 +91,7 @@ export default function OrderModal({ isOpen, onClose, product, selectedOptions =
         };
     }, []);
 
-    const errors = useMemo(() => validateOrderForm(formData), [formData]);
+    const errors = useMemo(() => validateOrderForm(formData, o.errors), [formData, o.errors]);
     const isFormValid = hasRequiredOrderFields(formData) && Object.keys(errors).length === 0 && items.length > 0 && items.every(i => i.productId && (parseQuantity(i.quantity) || 0) > 0);
 
     const totalPrice = useMemo(() => {
@@ -211,7 +214,7 @@ export default function OrderModal({ isOpen, onClose, product, selectedOptions =
                 headers: token ? { Authorization: `Bearer ${token}` } : {}
             });
 
-            setSuccessMessage('Заказ оформлен. Мы свяжемся с вами');
+            setSuccessMessage(o.success);
             setFormData(initialState);
             setItems([{ productId: product?.id || '', quantity: 1 }]);
             setTouchedFields({});
@@ -222,7 +225,7 @@ export default function OrderModal({ isOpen, onClose, product, selectedOptions =
             }, 1800);
         } catch (error) {
             console.error(error);
-            setSubmitError('Не удалось оформить заказ. Попробуйте еще раз.');
+            setSubmitError(t('cart.submitError'));
         } finally {
             setSubmitting(false);
         }
@@ -249,10 +252,10 @@ export default function OrderModal({ isOpen, onClose, product, selectedOptions =
                         <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-gray-100 bg-white/95 px-6 py-5 backdrop-blur md:px-8">
                             <div>
                                 <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-gray-400">
-                                    Оформление заказа
+                                    {o.eyebrow}
                                 </p>
                                 <h2 className="mt-2 text-2xl font-light text-[#051F20]">
-                                    Проверьте данные и подтвердите заказ
+                                    {o.title}
                                 </h2>
                             </div>
 
@@ -260,7 +263,7 @@ export default function OrderModal({ isOpen, onClose, product, selectedOptions =
                                 type="button"
                                 onClick={handleClose}
                                 className="rounded-full p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200"
-                                aria-label="Закрыть"
+                                aria-label={o.close}
                             >
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
                                     <path d="M6 6L18 18" />
@@ -279,13 +282,13 @@ export default function OrderModal({ isOpen, onClose, product, selectedOptions =
                                     return (
                                         <div key={index} className="grid items-end gap-3 rounded-2xl border border-gray-100 bg-[#F5F5F7] p-4 md:grid-cols-[1.5fr_1fr_1fr_auto]">
                                             <div>
-                                                <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.24em] text-gray-400">Товар</label>
+                                                <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.24em] text-gray-400">{o.product}</label>
                                                 <select
                                                     value={item.productId}
                                                     onChange={(e) => updateItem(index, 'productId', e.target.value)}
                                                     className={`${fieldBaseClassName} border-gray-200 bg-white text-[#0D3B2E]`}
                                                 >
-                                                    <option value="">Выберите товар</option>
+                                                    <option value="">{o.selectProduct}</option>
                                                     {product && !products.find(p => String(p.id) === String(product.id)) && (
                                                         <option value={product.id}>{product.name}</option>
                                                     )}
@@ -295,7 +298,7 @@ export default function OrderModal({ isOpen, onClose, product, selectedOptions =
                                                 </select>
                                             </div>
                                             <div>
-                                                <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.24em] text-gray-400">Количество</label>
+                                                <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.24em] text-gray-400">{o.quantity}</label>
                                                 <input
                                                     type="text"
                                                     inputMode="numeric"
@@ -305,7 +308,7 @@ export default function OrderModal({ isOpen, onClose, product, selectedOptions =
                                                 />
                                             </div>
                                             <div>
-                                                <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.24em] text-gray-400">Сумма</label>
+                                                <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.24em] text-gray-400">{o.sum}</label>
                                                 <div className={`${fieldBaseClassName} border-transparent bg-transparent pl-0 font-semibold text-[#0D3B2E] text-lg`}>
                                                     {formatPrice(itemTotal)}
                                                 </div>
@@ -322,10 +325,10 @@ export default function OrderModal({ isOpen, onClose, product, selectedOptions =
                                 })}
                                 <div className="flex items-center justify-between px-2">
                                     <button type="button" onClick={addItem} className="text-sm font-semibold uppercase tracking-wider text-[#2E6B50] hover:underline">
-                                        + Добавить товар
+                                        {o.addProduct}
                                     </button>
                                     <div className="text-right">
-                                        <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-gray-400">Общая сумма</p>
+                                        <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-gray-400">{o.totalAmount}</p>
                                         <p className="text-2xl font-semibold text-[#0D3B2E]">{formatPrice(totalPrice)}</p>
                                     </div>
                                 </div>
@@ -344,7 +347,7 @@ export default function OrderModal({ isOpen, onClose, product, selectedOptions =
                                     </div>
                                     <div>
                                         <p className="font-medium">✅ {successMessage}</p>
-                                        <p className="mt-1 text-sm text-emerald-800/80">Окно закроется автоматически.</p>
+                                        <p className="mt-1 text-sm text-emerald-800/80">{o.autoClose}</p>
                                     </div>
                                 </motion.div>
                             )}
@@ -357,7 +360,7 @@ export default function OrderModal({ isOpen, onClose, product, selectedOptions =
 
                             {showValidationSummary && (
                                 <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900" role="alert">
-                                    Проверьте обязательные поля: имя, телефон и адрес должны быть заполнены корректно.
+                                    {o.validationSummary}
                                 </div>
                             )}
 
@@ -366,7 +369,7 @@ export default function OrderModal({ isOpen, onClose, product, selectedOptions =
                                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                         <div>
                                             <label htmlFor="order-name" className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.24em] text-gray-400">
-                                                Имя
+                                                {o.name}
                                             </label>
                                             <input
                                                 id="order-name"
@@ -380,12 +383,12 @@ export default function OrderModal({ isOpen, onClose, product, selectedOptions =
                                                 onChange={(event) => updateField('name', sanitizeNameInput(event.target.value))}
                                                 onBlur={() => markTouched('name')}
                                                 className={getFieldClassName('name')}
-                                                placeholder="Иван Иванов"
+                                                placeholder={o.namePlaceholder}
                                                 aria-invalid={Boolean(getFieldError('name'))}
                                                 aria-describedby="order-name-hint order-name-error"
                                             />
                                             <p id="order-name-hint" className="mt-2 text-xs text-gray-500">
-                                                Укажите имя не короче 2 символов.
+                                                {o.nameHint}
                                             </p>
                                             {getFieldError('name') && (
                                                 <p id="order-name-error" className="mt-2 text-sm text-red-600">{errors.name}</p>
@@ -394,7 +397,7 @@ export default function OrderModal({ isOpen, onClose, product, selectedOptions =
 
                                         <div>
                                             <label htmlFor="order-phone" className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.24em] text-gray-400">
-                                                Телефон
+                                                {o.phone}
                                             </label>
                                             <input
                                                 id="order-phone"
@@ -412,7 +415,7 @@ export default function OrderModal({ isOpen, onClose, product, selectedOptions =
                                                 aria-describedby="order-phone-hint order-phone-error"
                                             />
                                             <p id="order-phone-hint" className="mt-2 text-xs text-gray-500">
-                                                Номер нужен в формате +7XXXXXXXXXX.
+                                                {o.phoneHint}
                                             </p>
                                             {getFieldError('phone') && (
                                                 <p id="order-phone-error" className="mt-2 text-sm text-red-600">{errors.phone}</p>
@@ -422,7 +425,7 @@ export default function OrderModal({ isOpen, onClose, product, selectedOptions =
 
                                     <div>
                                         <label htmlFor="order-address" className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.24em] text-gray-400">
-                                            Адрес доставки
+                                            {o.address}
                                         </label>
                                         <input
                                             id="order-address"
@@ -433,12 +436,12 @@ export default function OrderModal({ isOpen, onClose, product, selectedOptions =
                                             onChange={(event) => updateField('address', event.target.value)}
                                             onBlur={() => markTouched('address')}
                                             className={getFieldClassName('address')}
-                                            placeholder="Город, улица, дом"
+                                            placeholder={o.addressPlaceholder}
                                             aria-invalid={Boolean(getFieldError('address'))}
                                             aria-describedby="order-address-hint order-address-error"
                                         />
                                         <p id="order-address-hint" className="mt-2 text-xs text-gray-500">
-                                            Добавьте полный адрес доставки, чтобы мы могли подтвердить заказ быстрее.
+                                            {o.addressHint}
                                         </p>
                                         {getFieldError('address') && (
                                             <p id="order-address-error" className="mt-2 text-sm text-red-600">{errors.address}</p>
@@ -454,14 +457,14 @@ export default function OrderModal({ isOpen, onClose, product, selectedOptions =
                                                 onChange={(event) => setFormData((prev) => ({ ...prev, whatsapp: event.target.checked }))}
                                                 className="h-4 w-4 cursor-pointer accent-[#2E6B50]"
                                             />
-                                            <span className="text-sm text-[#0D3B2E]">Связаться по WhatsApp</span>
+                                            <span className="text-sm text-[#0D3B2E]">{o.whatsapp}</span>
                                         </label>
                                     </div>
 
                                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                         <div>
                                             <label htmlFor="order-payment" className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.24em] text-gray-400">
-                                                Способ оплаты
+                                                {o.paymentMethod}
                                             </label>
                                             <select
                                                 id="order-payment"
@@ -472,8 +475,8 @@ export default function OrderModal({ isOpen, onClose, product, selectedOptions =
                                                 className={getFieldClassName('paymentMethod')}
                                                 aria-invalid={Boolean(getFieldError('paymentMethod'))}
                                             >
-                                                <option value="CASH">Наличными при получении</option>
-                                                <option value="CARD">Перевод на карту</option>
+                                                <option value="CASH">{o.cash}</option>
+                                                <option value="CARD">{o.card}</option>
                                             </select>
                                             {getFieldError('paymentMethod') && (
                                                 <p className="mt-2 text-sm text-red-600">{errors.paymentMethod}</p>
@@ -483,7 +486,7 @@ export default function OrderModal({ isOpen, onClose, product, selectedOptions =
 
                                     <div>
                                         <label htmlFor="order-comment" className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.24em] text-gray-400">
-                                            Комментарий
+                                            {o.comment}
                                         </label>
                                         <textarea
                                             id="order-comment"
@@ -491,7 +494,7 @@ export default function OrderModal({ isOpen, onClose, product, selectedOptions =
                                             value={formData.comment}
                                             onChange={(event) => setFormData((prev) => ({ ...prev, comment: event.target.value }))}
                                             className={`${fieldBaseClassName} ${fieldIdleClassName} resize-none`}
-                                            placeholder="Уточнения к заказу, удобное время для связи и пожелания"
+                                            placeholder={o.commentPlaceholder}
                                         />
                                     </div>
 
@@ -502,7 +505,7 @@ export default function OrderModal({ isOpen, onClose, product, selectedOptions =
                                             disabled={submitting}
                                             className="order-2 px-5 py-3 text-sm uppercase tracking-[0.2em] text-gray-500 transition-colors hover:text-gray-800 sm:order-1"
                                         >
-                                            Отмена
+                                            {o.cancel}
                                         </button>
 
                                         <button
@@ -516,7 +519,7 @@ export default function OrderModal({ isOpen, onClose, product, selectedOptions =
                                             {submitting && (
                                                 <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                                             )}
-                                            {successMessage ? 'Заказ оформлен' : submitting ? 'Оформление...' : 'Заказать'}
+                                            {successMessage ? o.ordered : submitting ? o.processing : o.order}
                                         </button>
                                     </div>
                                 </fieldset>

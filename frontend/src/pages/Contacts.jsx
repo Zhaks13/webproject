@@ -17,7 +17,7 @@ export default function Contacts() {
             <div className="max-w-6xl mx-auto">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
 
-                    {/* Левая колонка */}
+                    {/* Left column */}
                     <div className="flex flex-col justify-center">
                         <motion.h1 {...fadeUp(0)} className="text-6xl md:text-7xl font-semibold tracking-tight mb-8">
                             {c.title}
@@ -28,7 +28,7 @@ export default function Contacts() {
 
                         <div className="space-y-10">
 
-                            {/* Телефон */}
+                            {/* Phone */}
                             <motion.div {...fadeUp(0.15)}>
                                 <h3 className="text-xs uppercase tracking-widest text-zinc-400 font-bold mb-3">{c.phone}</h3>
                                 <a
@@ -53,7 +53,7 @@ export default function Contacts() {
                                 </a>
                             </motion.div>
 
-                            {/* Адрес */}
+                            {/* Address */}
                             <motion.div {...fadeUp(0.25)}>
                                 <h3 className="text-xs uppercase tracking-widest text-zinc-400 font-bold mb-3">{c.showroom}</h3>
                                 <p className="text-xl font-semibold leading-relaxed">
@@ -69,7 +69,7 @@ export default function Contacts() {
                                 </a>
                             </motion.div>
 
-                            {/* Соцсети */}
+                            {/* Socials */}
                             <motion.div {...fadeUp(0.3)}>
                                 <h3 className="text-xs uppercase tracking-widest text-zinc-400 font-bold mb-3">{c.socials}</h3>
                                 <div className="flex flex-col gap-2">
@@ -78,7 +78,7 @@ export default function Contacts() {
                                 </div>
                             </motion.div>
 
-                            {/* CTA кнопка */}
+                            {/* CTA button */}
                             <motion.div {...fadeUp(0.35)}>
                                 <a
                                     href="https://wa.me/77774754775"
@@ -93,11 +93,11 @@ export default function Contacts() {
                         </div>
                     </div>
 
-                    {/* Правая колонка — Карта */}
+                    {/* Map column */}
                     <motion.div {...fadeUp(0.2)} className="w-full sticky top-8">
                         <div className="w-full rounded-2xl overflow-hidden shadow-sm border border-zinc-200 aspect-[4/5]">
                             <iframe
-                                title="Шоурум на карте"
+                                title={c.mapTitle}
                                 src="https://yandex.ru/map-widget/v1/?ll=71.325672%2C51.199345&z=16&text=%D0%90%D1%81%D1%82%D0%B0%D0%BD%D0%B0%2C%20%D1%83%D0%BB.%20%D0%91%D0%B0%D1%80%D1%88%D1%8B%D0%BD%2026"
                                 width="100%"
                                 height="100%"

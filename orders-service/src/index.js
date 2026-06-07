@@ -197,8 +197,66 @@ const storage = multer.diskStorage({
 
 const upload = multer({
     storage,
-    limits: { files: 5 }
+    limits: { files: 5 },
+    fileFilter: (req, file, cb) => {
+        console.log('[orders upload trace] fileFilter received file', {
+            fieldname: file.fieldname,
+            originalname: file.originalname,
+            mimetype: file.mimetype
+        });
+
+        if (!file.mimetype || !file.mimetype.startsWith('image/')) {
+            return cb(createRequestError(400, 'Only image uploads are allowed'));
+        }
+
+        cb(null, true);
+    }
 });
+
+function describeUploadedFile(file) {
+    const absolutePath = path.resolve(process.cwd(), file.path);
+    let stat = null;
+
+    try {
+        stat = fs.statSync(absolutePath);
+    } catch (error) {
+        console.error('[orders upload trace] failed to stat uploaded file', {
+            originalname: file.originalname,
+            path: file.path,
+            absolutePath,
+            error: error.message
+        });
+    }
+
+    return {
+        fieldname: file.fieldname,
+        originalname: file.originalname,
+        encoding: file.encoding,
+        mimetype: file.mimetype,
+        filename: file.filename,
+        path: file.path,
+        absolutePath,
+        exists: fs.existsSync(absolutePath),
+        size: stat ? stat.size : null
+    };
+}
+
+function uploadOrderImages(req, res, next) {
+    upload.array('images', 5)(req, res, (error) => {
+        if (error) {
+            console.error('Order image upload error:', error);
+            return res.status(error.statusCode || 400).json({ error: error.message });
+        }
+
+        console.log('[orders upload trace] multipart parsed', {
+            contentType: req.headers['content-type'],
+            body: req.body,
+            files: Array.isArray(req.files) ? req.files.map(describeUploadedFile) : req.files
+        });
+
+        next();
+    });
+}
 
 app.use(cors());
 app.use(express.json());
@@ -236,7 +294,7 @@ app.get('/orders', verifyToken, requireAdmin, async (req, res) => {
     }
 });
 
-app.post('/orders', upload.array('images', 5), async (req, res) => {
+app.post('/orders', uploadOrderImages, async (req, res) => {
     try {
         let userId = null;
         const authHeader = req.headers.authorization;
@@ -324,6 +382,15 @@ app.post('/orders', upload.array('images', 5), async (req, res) => {
             data.customDescription = normalizeOptionalString(customDescription);
         }
 
+        console.log('[orders create trace] data prepared for database', {
+            type: data.type,
+            name: data.name,
+            phone: data.phone,
+            customDescription: data.customDescription,
+            imageCount: data.images.length,
+            images: data.images
+        });
+
         if (userId) {
             data.userId = parseInt(userId, 10);
         }
@@ -350,6 +417,13 @@ app.post('/orders', upload.array('images', 5), async (req, res) => {
 
         res.status(201).json(serializeOrder(order));
 
+        console.log('[orders create trace] order saved', {
+            id: order.id,
+            type: order.type,
+            imageCount: Array.isArray(order.images) ? order.images.length : null,
+            images: order.images
+        });
+
         try {
             const orderForTelegram = { ...order };
             if (resolvedItems && resolvedItems.items && orderForTelegram.items) {
@@ -358,6 +432,12 @@ app.post('/orders', upload.array('images', 5), async (req, res) => {
                     return { ...item, name: resolved ? resolved.productName : undefined };
                 });
             }
+            console.log('[orders telegram trace] passing order to Telegram service', {
+                id: orderForTelegram.id,
+                type: orderForTelegram.type,
+                imageCount: Array.isArray(orderForTelegram.images) ? orderForTelegram.images.length : null,
+                images: orderForTelegram.images
+            });
             sendOrderNotification(orderForTelegram);
         } catch (err) {
             console.error('Telegram notification trigger failed:', err);

@@ -2,8 +2,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { api } from '../api';
 import { Link } from 'react-router-dom';
+import { useLang } from '../context/LanguageContext';
 
 export default function ProfilePage() {
+    const { t, lang } = useLang();
+    const p = t.profile;
     const [user, setUser] = useState(() => {
         try { return JSON.parse(localStorage.getItem('user')) || null; } catch { return null; }
     });
@@ -26,22 +29,23 @@ export default function ProfilePage() {
                 api.get('products')
             ])
                 .then(([resOrders, resProducts]) => {
-                    const productsList = resProducts.data;
+                    const productsList = Array.isArray(resProducts.data) ? resProducts.data : [];
                     setProducts(productsList);
-                    const ordersWithNames = resOrders.data.map(order => {
+                    const ordersList = Array.isArray(resOrders.data) ? resOrders.data : [];
+                    const ordersWithNames = ordersList.map(order => {
                         const items = Array.isArray(order.items) ? order.items : [];
                         const firstItem = items[0];
                         const matched = firstItem ? productsList.find(p => p.id === firstItem.productId) : null;
 
-                        let productName = 'Заказ';
+                        let productName = p.defaultOrderName;
                         if (order.displayName) {
                             productName = order.displayName;
                         } else if (matched) {
                             productName = matched.name;
                         } else if (firstItem?.productId) {
-                            productName = `Товар #${firstItem.productId}`;
+                            productName = p.productNumber.replace('{{id}}', firstItem.productId);
                         } else if (order.productId) {
-                            productName = `Товар #${order.productId}`;
+                            productName = p.productNumber.replace('{{id}}', order.productId);
                         }
 
                         const totalQuantity = items.reduce((sum, item) => sum + (Number(item.quantity) || 1), 0);
@@ -59,10 +63,10 @@ export default function ProfilePage() {
                     });
                     setOrders(ordersWithNames);
                 })
-                .catch(err => console.error('Ошибка загрузки заказов:', err))
+                .catch(err => console.error(p.ordersLoadError, err))
                 .finally(() => setLoading(false));
         }
-    }, []);
+    }, [p]);
 
     const openEditModal = () => {
         setEditForm({
@@ -79,18 +83,18 @@ export default function ProfilePage() {
     const validateEdit = () => {
         const errs = {};
         if (!editForm.name.trim() || editForm.name.trim().length < 2) {
-            errs.name = 'Имя должно быть не короче 2 символов';
+            errs.name = p.errors.name;
         }
         const digits = editForm.phone.replace(/\D/g, '');
         if (digits.length < 10) {
-            errs.phone = 'Введите корректный номер телефона';
+            errs.phone = p.errors.phone;
         }
         if (editForm.password) {
             if (editForm.password.length < 6) {
-                errs.password = 'Минимум 6 символов';
+                errs.password = p.errors.password;
             }
             if (editForm.password !== editForm.confirmPassword) {
-                errs.confirmPassword = 'Пароли не совпадают';
+                errs.confirmPassword = p.errors.confirmPassword;
             }
         }
         return errs;
@@ -132,7 +136,7 @@ export default function ProfilePage() {
             if (serverErrors) {
                 setEditErrors(serverErrors);
             } else {
-                setEditErrors({ general: err.response?.data?.message || 'Ошибка сервера' });
+                setEditErrors({ general: err.response?.data?.message || p.serverError });
             }
         } finally {
             setEditSubmitting(false);
@@ -142,7 +146,7 @@ export default function ProfilePage() {
     if (!user) {
         return (
             <div className="flex items-center justify-center p-8 bg-gray-50 min-h-screen">
-                <p className="text-gray-900 text-lg">Пожалуйста, войдите в систему.</p>
+                <p className="text-gray-900 text-lg">{p.loginRequired}</p>
             </div>
         );
     }
@@ -171,11 +175,11 @@ export default function ProfilePage() {
 
     const translateStatus = (status) => {
         const types = {
-            'NEW': 'Новый',
-            'IN_PROGRESS': 'В работе',
-            'READY': 'Готов',
-            'DONE': 'Выполнен',
-            'CANCELLED': 'Отменен'
+            'NEW': t('statuses.NEW'),
+            'IN_PROGRESS': t('statuses.IN_PROGRESS'),
+            'READY': t('statuses.READY'),
+            'DONE': t('statuses.DONE'),
+            'CANCELLED': t('statuses.CANCELLED')
         };
         return types[status] || status;
     };
@@ -212,7 +216,7 @@ export default function ProfilePage() {
                 transition={{ duration: 0.4, ease: "easeOut" }}
                 className="max-w-5xl mx-auto px-4"
             >
-                {/* ПРОФИЛЬ КАРТОЧКА (HEADER) */}
+                {/* Profile header */}
                 <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 flex flex-col md:flex-row items-center justify-between gap-6 transition-all duration-300 hover:shadow-xl">
                     <div className="flex items-center gap-6 w-full md:w-auto">
                         <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center text-2xl font-bold text-gray-500 shrink-0 shadow-inner">
@@ -235,13 +239,13 @@ export default function ProfilePage() {
                         onClick={openEditModal}
                         className="border border-gray-200 rounded-lg px-5 py-2.5 text-sm font-medium hover:bg-gray-50 hover:-translate-y-0.5 hover:shadow-sm transition-all duration-200 w-full md:w-auto shrink-0 active:scale-95"
                     >
-                        Редактировать профиль
+                        {p.editProfile}
                     </button>
                 </div>
 
-                {/* БЛОК "МОИ ЗАКАЗЫ" */}
+                {/* Orders block */}
                 <div className="flex items-center justify-between mt-12 mb-6 px-2">
-                    <h2 className="text-xl font-semibold tracking-tight text-gray-900">Мои заказы</h2>
+                    <h2 className="text-xl font-semibold tracking-tight text-gray-900">{p.myOrders}</h2>
                 </div>
 
                 {loading ? (
@@ -255,15 +259,15 @@ export default function ProfilePage() {
                         <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-5 shadow-inner">
                             <span className="text-gray-400 text-3xl">📦</span>
                         </div>
-                        <h3 className="text-xl font-semibold text-gray-900 mb-2 tracking-tight">У вас пока нет заказов</h3>
+                        <h3 className="text-xl font-semibold text-gray-900 mb-2 tracking-tight">{p.noOrdersTitle}</h3>
                         <p className="text-gray-500 text-sm mb-8 max-w-sm leading-relaxed">
-                            Вы еще ничего не заказывали. Перейдите в каталог, чтобы сделать свой первый заказ и обновить интерьер.
+                            {p.noOrdersDesc}
                         </p>
                         <Link
                             to="/catalog"
                             className="bg-black text-white px-8 py-3 rounded-lg text-sm font-semibold hover:bg-gray-800 hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 active:scale-95 inline-block"
                         >
-                            Перейти в каталог
+                            {p.goToCatalog}
                         </Link>
                     </motion.div>
                 ) : (
@@ -277,19 +281,19 @@ export default function ProfilePage() {
                                     key={order.id}
                                     className={`bg-white rounded-xl shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 p-5 border border-gray-100 border-l-4 ${getStatusBorder(order.status)} flex flex-col md:flex-row md:items-center justify-between gap-5 group`}
                                 >
-                                    {/* ЛЕВО */}
+                                    {/* Left */}
                                     <div className="flex flex-col space-y-1.5 pl-2">
-                                        <h3 className="font-semibold text-gray-900 text-base tracking-tight">Заказ #{order.id}</h3>
+                                        <h3 className="font-semibold text-gray-900 text-base tracking-tight">{p.orderTitle.replace('{{id}}', order.id)}</h3>
                                         <div className="flex items-center gap-3 text-sm">
-                                            <span className="text-gray-400 font-medium">{new Date(order.createdAt).toLocaleDateString('ru-RU')}</span>
+                                            <span className="text-gray-400 font-medium">{new Date(order.createdAt).toLocaleDateString(lang === 'kz' ? 'kk-KZ' : 'ru-RU')}</span>
                                             <span className="w-1 h-1 rounded-full bg-gray-300"></span>
                                             <span className="text-gray-600 line-clamp-1">
-                                                {order.productName} {order.totalQuantity > 1 ? `и еще ${order.totalQuantity - 1}` : ''}
+                                                {order.productName} {order.totalQuantity > 1 ? p.moreItems.replace('{{count}}', order.totalQuantity - 1) : ''}
                                             </span>
                                         </div>
                                     </div>
 
-                                    {/* ПРАВО */}
+                                    {/* Right */}
                                     <div className="flex flex-wrap items-center gap-5 mt-2 md:mt-0 justify-between md:justify-end">
                                         <span className={`px-3 py-1 rounded-md text-xs font-semibold tracking-wide uppercase shadow-sm ${getStatusStyle(order.status)}`}>
                                             {translateStatus(order.status)}
@@ -300,10 +304,10 @@ export default function ProfilePage() {
                                                 onClick={() => setSelectedOrder(order)}
                                                 className="text-sm border border-gray-200 bg-white text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 hover:text-black transition-all duration-200 hover:shadow-sm active:scale-95"
                                             >
-                                                Подробнее
+                                                {p.details}
                                             </button>
                                             <button className="bg-black text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-gray-800 hover:shadow-md transition-all duration-200 active:scale-95">
-                                                Повторить
+                                                {p.repeat}
                                             </button>
                                         </div>
                                     </div>
@@ -331,10 +335,10 @@ export default function ProfilePage() {
                             exit={{ opacity: 0, scale: 0.95, y: 10 }}
                             className="bg-white rounded-2xl shadow-2xl p-8 relative z-10 w-full max-w-lg"
                         >
-                            <h3 className="text-xl font-bold mb-4">Детали заказа #{selectedOrder.id}</h3>
+                            <h3 className="text-xl font-bold mb-4">{p.orderDetails.replace('{{id}}', selectedOrder.id)}</h3>
                             <div className="space-y-4 mb-8">
                                 <div className="flex justify-between border-b border-gray-100 pb-2 relative">
-                                    <span className="text-gray-500">Товары ({selectedOrder.totalQuantity || 1} шт.)</span>
+                                    <span className="text-gray-500">{p.goods} ({selectedOrder.totalQuantity || 1} {t('common.itemsCount')})</span>
                                     <div className="flex flex-col items-end text-sm">
                                         {Array.isArray(selectedOrder.items) && selectedOrder.items.length > 0 ? (
                                             selectedOrder.items.map((item, idx) => {
@@ -351,19 +355,19 @@ export default function ProfilePage() {
                                     </div>
                                 </div>
                                 <div className="flex justify-between border-b border-gray-100 pb-2">
-                                    <span className="text-gray-500">Статус</span>
+                                    <span className="text-gray-500">{p.status}</span>
                                     <span className={`px-2 py-1 rounded text-xs font-semibold ${getStatusStyle(selectedOrder.status)}`}>
                                         {translateStatus(selectedOrder.status)}
                                     </span>
                                 </div>
                                 <div className="flex justify-between border-b border-gray-100 pb-2">
-                                    <span className="text-gray-500">Дата оформления</span>
-                                    <span className="font-medium">{new Date(selectedOrder.createdAt).toLocaleDateString('ru-RU')}</span>
+                                    <span className="text-gray-500">{p.createdAt}</span>
+                                    <span className="font-medium">{new Date(selectedOrder.createdAt).toLocaleDateString(lang === 'kz' ? 'kk-KZ' : 'ru-RU')}</span>
                                 </div>
                                 {selectedOrder.calculatedTotalPrice > 0 && (
                                     <div className="flex justify-between border-b border-gray-100 pb-2 mt-4 pt-2">
-                                        <span className="text-gray-500">Сумма</span>
-                                        <span className="font-medium font-mono text-lg">{selectedOrder.calculatedTotalPrice.toLocaleString('ru-RU')} ₸</span>
+                                        <span className="text-gray-500">{p.amount}</span>
+                                        <span className="font-medium font-mono text-lg">{selectedOrder.calculatedTotalPrice.toLocaleString(lang === 'kz' ? 'kk-KZ' : 'ru-RU')} ₸</span>
                                     </div>
                                 )}
                             </div>
@@ -371,7 +375,7 @@ export default function ProfilePage() {
                                 onClick={() => setSelectedOrder(null)}
                                 className="w-full bg-black text-white rounded-xl py-3 font-semibold hover:bg-gray-800 transition-colors active:scale-95"
                             >
-                                Закрыть
+                                {t('common.close')}
                             </button>
                         </motion.div>
                     </div>
@@ -406,13 +410,13 @@ export default function ProfilePage() {
                                             <polyline points="20 6 9 17 4 12" />
                                         </svg>
                                     </div>
-                                    <h3 className="text-xl font-bold text-gray-900 mb-1">Профиль обновлен</h3>
-                                    <p className="text-sm text-gray-500">Данные успешно сохранены</p>
+                                    <h3 className="text-xl font-bold text-gray-900 mb-1">{p.profileUpdated}</h3>
+                                    <p className="text-sm text-gray-500">{p.dataSaved}</p>
                                 </motion.div>
                             ) : (
                                 <>
                                     <div className="flex items-center justify-between mb-6">
-                                        <h3 className="text-xl font-bold text-gray-900">Редактировать профиль</h3>
+                                        <h3 className="text-xl font-bold text-gray-900">{p.editTitle}</h3>
                                         <button
                                             onClick={() => setEditOpen(false)}
                                             disabled={editSubmitting}
@@ -433,13 +437,13 @@ export default function ProfilePage() {
                                     <form onSubmit={handleEditSubmit} className="space-y-4">
                                         <div>
                                             <label className="block text-xs uppercase tracking-widest font-bold text-gray-400 mb-2">
-                                                Имя *
+                                                {p.name}
                                             </label>
                                             <input
                                                 type="text"
                                                 value={editForm.name}
                                                 onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))}
-                                                placeholder="Ваше имя"
+                                                placeholder={t('cart.namePlaceholder')}
                                                 className={inputCls('name')}
                                                 disabled={editSubmitting}
                                             />
@@ -448,7 +452,7 @@ export default function ProfilePage() {
 
                                         <div>
                                             <label className="block text-xs uppercase tracking-widest font-bold text-gray-400 mb-2">
-                                                Телефон *
+                                                {p.phone}
                                             </label>
                                             <input
                                                 type="tel"
@@ -462,17 +466,17 @@ export default function ProfilePage() {
                                         </div>
 
                                         <div className="pt-2 border-t border-gray-100">
-                                            <p className="text-xs text-gray-400 mb-3">Оставьте пустым, чтобы не менять пароль</p>
+                                            <p className="text-xs text-gray-400 mb-3">{p.leavePasswordEmpty}</p>
                                             <div className="space-y-3">
                                                 <div>
                                                     <label className="block text-xs uppercase tracking-widest font-bold text-gray-400 mb-2">
-                                                        Новый пароль
+                                                        {p.newPassword}
                                                     </label>
                                                     <input
                                                         type="password"
                                                         value={editForm.password}
                                                         onChange={e => setEditForm(p => ({ ...p, password: e.target.value }))}
-                                                        placeholder="Минимум 6 символов"
+                                                        placeholder={p.minPasswordPlaceholder}
                                                         className={inputCls('password')}
                                                         disabled={editSubmitting}
                                                         autoComplete="new-password"
@@ -487,13 +491,13 @@ export default function ProfilePage() {
                                                         exit={{ opacity: 0, height: 0 }}
                                                     >
                                                         <label className="block text-xs uppercase tracking-widest font-bold text-gray-400 mb-2">
-                                                            Подтвердите пароль
+                                                            {p.confirmPassword}
                                                         </label>
                                                         <input
                                                             type="password"
                                                             value={editForm.confirmPassword}
                                                             onChange={e => setEditForm(p => ({ ...p, confirmPassword: e.target.value }))}
-                                                            placeholder="Повторите пароль"
+                                                            placeholder={p.repeatPasswordPlaceholder}
                                                             className={inputCls('confirmPassword')}
                                                             disabled={editSubmitting}
                                                             autoComplete="new-password"
@@ -515,7 +519,7 @@ export default function ProfilePage() {
                                             {editSubmitting && (
                                                 <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
                                             )}
-                                            {editSubmitting ? 'Сохранение...' : 'Сохранить'}
+                                            {editSubmitting ? p.saving : p.save}
                                         </button>
                                     </form>
                                 </>

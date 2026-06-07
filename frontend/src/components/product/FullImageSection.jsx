@@ -1,8 +1,11 @@
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { useRef } from 'react';
-import { getImageUrl } from '../../../utils/image';
+import { getImageUrl } from '../../utils/image';
+import { useLang } from '../../context/LanguageContext';
 
 export default function FullImageSection({ image }) {
+    const { t } = useLang();
+    const p = t.product;
     const ref = useRef(null);
     const { scrollYProgress } = useScroll({
         target: ref,
@@ -36,8 +39,8 @@ export default function FullImageSection({ image }) {
                 transition={{ duration: 1, delay: 0.2 }}
                 className="absolute bottom-12 left-6 lg:bottom-24 lg:left-24 text-white"
             >
-                <p className="text-xs font-bold uppercase tracking-[0.3em] mb-4 opacity-70">Наследие массива</p>
-                <h2 className="text-4xl md:text-6xl font-semibold tracking-tight">Вечная классика</h2>
+                <p className="text-xs font-bold uppercase tracking-[0.3em] mb-4 opacity-70">{p.heritageEyebrow}</p>
+                <h2 className="text-4xl md:text-6xl font-semibold tracking-tight">{p.heritageTitle}</h2>
             </motion.div>
         </div>
     );

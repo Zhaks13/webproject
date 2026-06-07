@@ -38,7 +38,7 @@ export default function Cart() {
         if (items.length === 0) return;
         api.get('/products')
             .then(res => {
-                const productIds = new Set(res.data.map(p => p.id));
+                const productIds = new Set((Array.isArray(res.data) ? res.data : []).map(p => p.id));
                 const missing = new Set();
                 items.forEach(item => {
                     if (!productIds.has(item.productId)) {
@@ -199,13 +199,13 @@ export default function Cart() {
                                     <line x1="12" y1="17" x2="12.01" y2="17" />
                                 </svg>
                             </div>
-                            <p className="text-sm text-amber-800 font-medium">{c.unavailableWarning || 'Некоторые товары недоступны'}</p>
+                            <p className="text-sm text-amber-800 font-medium">{c.unavailableWarning}</p>
                         </div>
                         <button
                             onClick={handleRemoveUnavailable}
                             className="px-4 py-2 text-xs font-bold uppercase tracking-wider text-amber-700 bg-amber-100 hover:bg-amber-200 rounded-xl transition-colors flex-shrink-0"
                         >
-                            {c.removeUnavailable || 'Удалить'}
+                            {c.removeUnavailable}
                         </button>
                     </motion.div>
                 )}
@@ -247,7 +247,7 @@ export default function Cart() {
                                                 {item.name}
                                             </h3>
                                             {isItemUnavailable ? (
-                                                <p className="text-xs text-amber-600 font-semibold">{c.unavailableItem || 'Товар недоступен'}</p>
+                                                <p className="text-xs text-amber-600 font-semibold">{c.unavailableItem}</p>
                                             ) : (
                                                 <p className="text-zinc-500 text-sm">{formatPrice(item.price)} ₸</p>
                                             )}
@@ -296,7 +296,7 @@ export default function Cart() {
                                         <button
                                             onClick={() => removeItem(item.productId)}
                                             className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center text-zinc-400 hover:text-red-500 hover:bg-red-50 active:scale-95 transition-all"
-                                            title={c.removeItem || 'Удалить'}
+                                            title={c.removeItem}
                                         >
                                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                                                 <path d="M18 6L6 18" /><path d="M6 6L18 18" />

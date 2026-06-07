@@ -3,16 +3,16 @@ import { API_URL } from '../api';
 export function getImageUrl(path) {
     if (!path) return '';
 
-    // если уже полный URL — ничего не делаем
+    // Absolute URLs are ready to use.
     if (path.startsWith('http')) {
         return path;
     }
 
-    // если путь уже начинается с /api
+    // API-relative paths are served by the gateway.
     if (path.startsWith('/api')) {
         return `${API_URL.replace('/api', '')}${path}`;
     }
 
-    // если обычный путь
+    // Product service serves uploaded assets.
     return `${API_URL}${path.startsWith('/') ? '' : '/'}${path}`;
 }

@@ -1,8 +1,11 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { getImageUrl } from '../../../utils/image';
+import { getImageUrl } from '../../utils/image';
+import { useLang } from '../../context/LanguageContext';
 
 export default function RelatedProducts({ products }) {
+    const { t } = useLang();
+    const p = t.product;
     if (!products || products.length === 0) return null;
 
     return (
@@ -15,11 +18,11 @@ export default function RelatedProducts({ products }) {
                 className="mb-16 flex items-end justify-between"
             >
                 <div>
-                    <h2 className="text-4xl font-semibold tracking-tight text-[#111] mb-2">Дополните интерьер</h2>
-                    <p className="text-zinc-500 font-medium">Безупречное сочетание предметов коллекции.</p>
+                    <h2 className="text-4xl font-semibold tracking-tight text-[#111] mb-2">{p.relatedHeading}</h2>
+                    <p className="text-zinc-500 font-medium">{p.relatedText}</p>
                 </div>
                 <Link to="/catalog" className="text-xs uppercase tracking-widest font-bold text-[#111] border-b border-[#111] pb-1 hover:text-zinc-500 hover:border-zinc-500 transition-colors hidden md:block">
-                    Весь каталог
+                    {p.fullCatalog}
                 </Link>
             </motion.div>
 
@@ -41,7 +44,7 @@ export default function RelatedProducts({ products }) {
                                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                                 />
                             ) : (
-                                <div className="w-full h-full flex items-center justify-center text-xs font-bold uppercase tracking-widest text-zinc-400">Нет фото</div>
+                                <div className="w-full h-full flex items-center justify-center text-xs font-bold uppercase tracking-widest text-zinc-400">{t('common.noPhoto')}</div>
                             )}
                         </Link>
                         <div>
@@ -56,7 +59,7 @@ export default function RelatedProducts({ products }) {
 
             <div className="mt-12 text-center md:hidden">
                 <Link to="/catalog" className="text-xs uppercase tracking-widest font-bold text-[#111] border-b border-[#111] pb-1">
-                    Весь каталог
+                    {p.fullCatalog}
                 </Link>
             </div>
         </div>

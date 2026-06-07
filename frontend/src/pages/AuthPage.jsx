@@ -2,9 +2,12 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
+import { useLang } from '../context/LanguageContext';
 
 export default function AuthPage() {
     const navigate = useNavigate();
+    const { t } = useLang();
+    const a = t.auth;
     const [mode, setMode] = useState('login');
     const [form, setForm] = useState({ name: '', phone: '', password: '', confirmPassword: '' });
     const [error, setError] = useState('');
@@ -21,7 +24,7 @@ export default function AuthPage() {
         setError('');
 
         if (mode === 'register' && form.password !== form.confirmPassword) {
-            setError('Пароли не совпадают');
+            setError(a.passwordMismatch);
             setLoading(false);
             return;
         }
@@ -41,7 +44,7 @@ export default function AuthPage() {
             navigate(user.role === 'ADMIN' ? '/admin' : '/profile');
         } catch (err) {
             console.error(err);
-            setError(err.response?.data?.message || 'Нет соединения с сервером');
+            setError(err.response?.data?.message || a.connectionError);
         } finally {
             setLoading(false);
         }
@@ -63,17 +66,17 @@ export default function AuthPage() {
                 className="relative flex w-full max-w-[900px] min-h-[500px] rounded-2xl overflow-hidden shadow-xl"
             >
 
-                {/* Левая часть */}
+                {/* Left side */}
                 <div className="w-1/2 bg-black text-white flex items-center justify-center pl-10 pr-32 py-10">
                     <div className="text-center w-full max-w-[320px]">
                         <h2 className="text-3xl font-bold mb-4 tracking-tight">Stolyarniy Dvor</h2>
                         <p className="text-gray-400 text-base">
-                            Мебель с характером и качеством
+                            {a.tagline}
                         </p>
                     </div>
                 </div>
 
-                {/* Правая часть (с вырезом) */}
+                {/* Right side */}
                 <div className="
                     absolute right-0 top-0 z-10
                     w-full md:w-[58%] h-full
@@ -86,25 +89,25 @@ export default function AuthPage() {
                 ">
                     <div className="w-full max-w-sm mx-auto">
 
-                        {/* Переключатель */}
+                        {/* Mode switch */}
                         <div className="flex gap-6 mb-8 text-sm mt-4 md:mt-0">
                             <button
                                 type="button"
                                 onClick={() => { setMode('login'); setError(''); }}
                                 className={`pb-3 font-semibold transition-all ${mode === 'login' ? 'text-black border-b-2 border-black' : 'text-gray-400 hover:text-gray-600'}`}
                             >
-                                Вход
+                                {a.login}
                             </button>
                             <button
                                 type="button"
                                 onClick={() => { setMode('register'); setError(''); }}
                                 className={`pb-3 font-semibold transition-all ${mode === 'register' ? 'text-black border-b-2 border-black' : 'text-gray-400 hover:text-gray-600'}`}
                             >
-                                Регистрация
+                                {a.register}
                             </button>
                         </div>
 
-                        {/* Форма */}
+                        {/* Form */}
                         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                             <AnimatePresence>
                                 {mode === 'register' && (
@@ -118,7 +121,7 @@ export default function AuthPage() {
                                         <input
                                             name="name"
                                             type="text"
-                                            placeholder="Ваше имя"
+                                            placeholder={a.namePlaceholder}
                                             value={form.name}
                                             onChange={handleChange}
                                             required
@@ -131,7 +134,7 @@ export default function AuthPage() {
                             <input
                                 name="phone"
                                 type="text"
-                                placeholder="Телефон (+7...)"
+                                placeholder={a.phonePlaceholder}
                                 value={form.phone}
                                 onChange={handleChange}
                                 required
@@ -141,7 +144,7 @@ export default function AuthPage() {
                             <input
                                 name="password"
                                 type="password"
-                                placeholder="Пароль"
+                                placeholder={a.passwordPlaceholder}
                                 value={form.password}
                                 onChange={handleChange}
                                 required
@@ -160,7 +163,7 @@ export default function AuthPage() {
                                         <input
                                             name="confirmPassword"
                                             type="password"
-                                            placeholder="Подтверждение пароля"
+                                            placeholder={a.confirmPasswordPlaceholder}
                                             value={form.confirmPassword}
                                             onChange={handleChange}
                                             required
@@ -170,7 +173,7 @@ export default function AuthPage() {
                                 )}
                             </AnimatePresence>
 
-                            {/* Ошибка */}
+                            {/* Error */}
                             <AnimatePresence>
                                 {error && (
                                     <motion.p
@@ -184,13 +187,13 @@ export default function AuthPage() {
                                 )}
                             </AnimatePresence>
 
-                            {/* Кнопка */}
+                            {/* Button */}
                             <button
                                 type="submit"
                                 disabled={loading}
                                 className="mt-2 w-full bg-black text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-sm py-3 rounded-lg transition-all"
                             >
-                                {loading ? 'Загрузка...' : mode === 'login' ? 'Войти' : 'Зарегистрироваться'}
+                                {loading ? a.loading : mode === 'login' ? a.loginButton : a.registerButton}
                             </button>
                         </form>
                     </div>

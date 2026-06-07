@@ -11,14 +11,14 @@ const formatPrice = (n) => Number(n).toLocaleString('ru-RU');
 
 /* ─── QUANTITY SELECTOR ─────────────────────────────── */
 
-function QuantitySelector({ value, onChange, min = 1, max = 99 }) {
+function QuantitySelector({ value, onChange, min = 1, max = 99, labels }) {
     return (
         <div className="flex items-center border border-zinc-200 rounded-xl overflow-hidden bg-white w-fit h-12">
             <button
                 onClick={() => onChange(Math.max(min, value - 1))}
                 disabled={value <= min}
                 className="w-12 h-full flex items-center justify-center text-lg font-medium text-zinc-600 hover:bg-zinc-50 active:bg-zinc-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                aria-label="Decrease quantity"
+                aria-label={labels.decrease}
             >
                 −
             </button>
@@ -29,7 +29,7 @@ function QuantitySelector({ value, onChange, min = 1, max = 99 }) {
                 onClick={() => onChange(Math.min(max, value + 1))}
                 disabled={value >= max}
                 className="w-12 h-full flex items-center justify-center text-lg font-medium text-zinc-600 hover:bg-zinc-50 active:bg-zinc-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                aria-label="Increase quantity"
+                aria-label={labels.increase}
             >
                 +
             </button>
@@ -60,8 +60,9 @@ export default function ProductDetails() {
         try {
             setLoading(true);
             const { data } = await api.get('/products');
-            setProduct(data.find(pr => pr.id === parseInt(id)));
-            setAllProducts(data);
+            const list = Array.isArray(data) ? data : [];
+            setProduct(list.find(pr => pr.id === parseInt(id)));
+            setAllProducts(list);
         } catch (e) {
             console.error(e);
         } finally {
@@ -90,7 +91,7 @@ export default function ProductDetails() {
 
     if (!product) return (
         <div className="min-h-screen bg-[#f5f5f5] flex items-center justify-center text-zinc-500">
-            Товар не найден
+            {p.notFound}
         </div>
     );
 
@@ -141,7 +142,11 @@ export default function ProductDetails() {
                                     initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
                                     className="flex flex-col sm:flex-row gap-4 mb-4"
                                 >
-                                    <QuantitySelector value={quantity} onChange={setQuantity} />
+                                    <QuantitySelector
+                                        value={quantity}
+                                        onChange={setQuantity}
+                                        labels={{ decrease: p.decreaseQuantity, increase: p.increaseQuantity }}
+                                    />
 
                                     <button
                                         onClick={handleAddToCart}
@@ -150,7 +155,7 @@ export default function ProductDetails() {
                                                 : 'bg-[#111] text-white hover:opacity-90 active:scale-[0.98]'
                                             }`}
                                     >
-                                        {added ? p.addedToCart || '✓ Добавлено' : p.addToCart || 'Добавить в корзину'}
+                                        {added ? p.addedToCart : p.addToCart}
                                     </button>
                                 </motion.div>
                             </div>
@@ -189,7 +194,7 @@ export default function ProductDetails() {
                 {relatedProducts.length > 0 && (
                     <div className="mt-24 mb-24 lg:mt-32">
                         <h2 className="text-2xl lg:text-3xl font-semibold tracking-tight mb-8 text-[#111]">
-                            Похожие товары
+                            {p.relatedTitle}
                         </h2>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -207,7 +212,7 @@ export default function ProductDetails() {
                                                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
                                             />
                                         ) : (
-                                            <span className="text-zinc-400 text-xs font-bold uppercase tracking-widest">Нет фото</span>
+                                            <span className="text-zinc-400 text-xs font-bold uppercase tracking-widest">{p.noPhoto || t('common.noPhoto')}</span>
                                         )}
                                     </div>
                                     <div>

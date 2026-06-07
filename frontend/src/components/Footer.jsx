@@ -5,6 +5,7 @@ export default function Footer() {
     const { t } = useLang();
     const f = t.footer;
     const n = t.nav;
+    const c = t.contacts;
     const location = useLocation();
 
     // Minimal footer on the Contacts page (no duplicate info)
@@ -71,7 +72,7 @@ export default function Footer() {
                     {/* Main grid — 4 columns on desktop */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-12">
 
-                        {/* Col 1 — Brand / О компании */}
+                        {/* Col 1 - Brand */}
                         <div className="flex flex-col gap-3">
                             <span className="text-2xl font-semibold text-white tracking-tight">
                                 Stolyarniy Dvor
@@ -101,7 +102,7 @@ export default function Footer() {
                                 WhatsApp
                             </a>
                             <p className="text-zinc-400 text-sm">
-                                г. Астана, ул. Баршын 26
+                                {c.address}
                             </p>
                             <a
                                 href="https://2gis.kz/astana/search/%D0%91%D0%B0%D1%80%D1%88%D1%8B%D0%BD%2026"

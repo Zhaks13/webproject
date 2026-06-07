@@ -53,7 +53,7 @@ export default function CustomOrder() {
             data.append('name', formData.name);
             data.append('phone', formData.phone);
             data.append('comment', formData.comment);
-            data.append('customTitle', 'Индивидуальный заказ');
+            data.append('customTitle', co.customTitle);
             data.append('customDescription', formData.comment);
             data.append('type', 'CUSTOM');
             data.append('address', '');
@@ -66,8 +66,24 @@ export default function CustomOrder() {
                 data.append('images', file);
             });
 
+            console.log('[CustomOrder trace] submitting form data', {
+                fileCount: files.length,
+                files: files.map((file) => ({
+                    name: file.name,
+                    type: file.type,
+                    size: file.size
+                })),
+                fields: Array.from(data.entries()).map(([key, value]) => ({
+                    key,
+                    value: value instanceof File
+                        ? { name: value.name, type: value.type, size: value.size }
+                        : value
+                }))
+            });
+
             await api.post('http://localhost:3002/orders', data, {
                 headers: {
+                    'Content-Type': 'multipart/form-data',
                     ...(token ? { Authorization: `Bearer ${token}` } : {})
                 }
             });
@@ -95,7 +111,7 @@ export default function CustomOrder() {
         <div className="bg-[#f5f5f5] text-[#111] min-h-screen py-20 px-6 font-sans">
             <div className="max-w-6xl mx-auto flex flex-col lg:flex-row gap-16 xl:gap-24">
 
-                {/* ЛЕВАЯ КОЛОНКА */}
+                {/* Left column */}
                 <div className="flex-1 w-full flex flex-col justify-start pt-4">
                     <motion.h1 {...fadeUp(0)} className="text-5xl md:text-6xl lg:text-7xl font-semibold tracking-tight mb-8 leading-[1.1]">
                         {co.title} <br className="hidden md:block" />
@@ -105,7 +121,7 @@ export default function CustomOrder() {
                         {co.desc}
                     </motion.p>
 
-                    {/* Timeline шагов */}
+                    {/* Timeline */}
                     <motion.div {...fadeUp(0.2)} className="space-y-12 max-w-md mb-16 relative before:absolute before:inset-0 before:ml-[5px] before:-translate-x-px md:before:ml-[5px] before:h-full before:w-0.5 before:bg-gradient-to-b before:from-zinc-300 before:via-zinc-300 before:to-transparent">
                         {co.steps.map((item) => (
                             <div key={item.step} className="relative pl-10 group cursor-default">
@@ -116,7 +132,7 @@ export default function CustomOrder() {
                         ))}
                     </motion.div>
 
-                    {/* Блок доверия */}
+                    {/* Trust block */}
                     <motion.div {...fadeUp(0.3)} className="grid grid-cols-2 md:grid-cols-3 gap-6 pt-10 border-t border-zinc-200">
                         {co.stats.map((s) => (
                             <div key={s.label} className={s.label.length > 10 ? 'col-span-2 md:col-span-1' : ''}>
@@ -127,7 +143,7 @@ export default function CustomOrder() {
                     </motion.div>
                 </div>
 
-                {/* ПРАВАЯ КОЛОНКА (Форма) */}
+                {/* Form column */}
                 <motion.div {...fadeUp(0.2)} className="flex-1 w-full flex flex-col justify-center">
                     <div className="bg-white border border-zinc-200 shadow-lg rounded-2xl p-8 lg:p-10 relative overflow-hidden">
 
@@ -173,7 +189,7 @@ export default function CustomOrder() {
                                 ></textarea>
                             </div>
 
-                            {/* Загрузка фото */}
+                            {/* Photo upload */}
                             <div>
                                 <label className="block text-xs uppercase tracking-widest font-bold text-zinc-400 mb-2">
                                     {co.labelRefs}
@@ -252,7 +268,7 @@ export default function CustomOrder() {
                             </button>
                         </form>
 
-                        {/* Сообщение об успехе */}
+                        {/* Success message */}
                         <AnimatePresence>
                             {success && (
                                 <motion.div

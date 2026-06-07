@@ -26,7 +26,7 @@ export default function CartToast() {
                     </div>
                     <div className="min-w-0">
                         <p className="text-xs font-bold uppercase tracking-wider opacity-70">
-                            {t.product?.addedToCart || '✓ Добавлено'}
+                            {t('product.addedToCart')}
                         </p>
                         <p className="text-sm font-medium truncate">{toast}</p>
                     </div>

@@ -21,7 +21,7 @@ export default function Products() {
         try {
             setLoading(true);
             const { data } = await api.get('/products');
-            setProducts(data);
+            setProducts(Array.isArray(data) ? data : []);
         } catch (e) {
             console.error('Failed to load products', e);
         } finally {

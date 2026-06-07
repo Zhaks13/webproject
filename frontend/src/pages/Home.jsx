@@ -16,7 +16,7 @@ export default function Home() {
         const fetchProducts = async () => {
             try {
                 const { data } = await api.get('/products');
-                setFeaturedProducts(data.slice(0, 4));
+                setFeaturedProducts(Array.isArray(data) ? data.slice(0, 4) : []);
             } catch (e) {
                 console.error('Failed to load featured products', e);
             }
@@ -72,7 +72,7 @@ export default function Home() {
                     >
                         <img
                             src={heroKitchen}
-                            alt="Кухня Stolyarniy Dvor"
+                            alt={h.heroAlt}
                             className="w-full h-full object-cover object-[center_20%]"
                         />
                     </motion.div>
